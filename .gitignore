@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SQL patches and test scripts (development only)
+*.sql
+check.js
+check_db.js
+test_insert.js
+supabase_schema_run.js
