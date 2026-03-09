@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-export type TableStatus = 'libre' | 'comiendo' | 'esperando_comida' | 'necesita_ayuda' | 'pidiendo_cuenta';
+export type TableStatus = 'libre' | 'mirando_menu' | 'comiendo' | 'esperando_comida' | 'necesita_ayuda' | 'pidiendo_cuenta';
 
 // Este hook se utilizará en el Waiter Panel para monitorear colores de las mesas
 export function useTables(initialMockTables: any[] = []) {

@@ -9,7 +9,8 @@ import {
     Coffee,
     CreditCard,
     Info,
-    Check
+    Check,
+    Search
 } from "lucide-react";
 import { useTables } from "@/hooks/useTables";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -17,7 +18,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { X, Receipt } from "lucide-react";
 
 // --- Mock Data & Types ---
-type TableStatus = 'libre' | 'comiendo' | 'necesita_ayuda' | 'pidiendo_cuenta' | 'esperando_comida';
+type TableStatus = 'libre' | 'mirando_menu' | 'comiendo' | 'necesita_ayuda' | 'pidiendo_cuenta' | 'esperando_comida';
 
 type Table = {
     id: string;
@@ -82,6 +83,7 @@ export default function WaiterPanel() {
     const getStatusStyles = (status: TableStatus) => {
         switch (status) {
             case 'libre': return "bg-[#1f222a] border-white/5 text-gray-400";
+            case 'mirando_menu': return "bg-teal-900/40 border-teal-500/50 text-teal-400";
             case 'comiendo': return "bg-blue-900/40 border-blue-500/50 text-blue-400";
             case 'esperando_comida': return "bg-yellow-900/40 border-yellow-500/50 text-yellow-500 animate-pulse";
             case 'necesita_ayuda': return "bg-red-900/40 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
@@ -93,6 +95,7 @@ export default function WaiterPanel() {
     const getStatusLabel = (status: TableStatus) => {
         switch (status) {
             case 'libre': return "Libre";
+            case 'mirando_menu': return "Viendo Menú";
             case 'comiendo': return "Comiendo";
             case 'esperando_comida': return "Esperando Ord.";
             case 'necesita_ayuda': return "Requiere Ayuda";
@@ -103,6 +106,7 @@ export default function WaiterPanel() {
     const getStatusIcon = (status: TableStatus) => {
         switch (status) {
             case 'libre': return <Coffee className="w-5 h-5 opacity-30" />;
+            case 'mirando_menu': return <Search className="w-5 h-5 text-teal-400 opacity-80" />;
             case 'comiendo': return <Utensils className="w-5 h-5" />;
             case 'esperando_comida': return <Coffee className="w-5 h-5" />;
             case 'necesita_ayuda': return <AlertTriangle className="w-5 h-5" />;
@@ -138,8 +142,9 @@ export default function WaiterPanel() {
             case 'pidiendo_cuenta': return 2;   // URGENCE HIGH (Purple)
             case 'esperando_comida': return 3;  // URGENCE MED (Yellow)
             case 'comiendo': return 4;          // OK (Blue)
-            case 'libre': return 5;             // LOWEST (Gray)
-            default: return 6;
+            case 'mirando_menu': return 5;      // OK (Teal)
+            case 'libre': return 6;             // LOWEST (Gray)
+            default: return 7;
         }
     };
 

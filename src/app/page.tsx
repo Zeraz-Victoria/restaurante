@@ -81,6 +81,8 @@ export default function ClientMobileApp() {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewScore, setReviewScore] = useState(0);
   const [reviewText, setReviewText] = useState("");
+  const [showHelpInput, setShowHelpInput] = useState(false);
+  const [helpText, setHelpText] = useState("");
 
   // Order Tracking State
   type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado' };
@@ -112,6 +114,12 @@ export default function ClientMobileApp() {
         setMesaNum(mNum);
         localStorage.setItem('resto_session_table', tId);
         localStorage.setItem('resto_session_mesa_num', mNum);
+
+        // Clean the URL so refreshing doesn't re-trigger initial state logic
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Update table status to indicate they are looking at the menu
+        updateTableStatus(tId, 'mirando_menu').catch(console.error);
       } else {
         const savedTId = localStorage.getItem('resto_session_table');
         const savedMNum = localStorage.getItem('resto_session_mesa_num');
@@ -250,11 +258,8 @@ export default function ClientMobileApp() {
 
     // --- Connect to Tables Logic ---
     try {
-      if (hasPreviousOrder) {
-        await updateTableStatus(tableId, 'comiendo');
-      } else {
-        await updateTableStatus(tableId, 'esperando_comida');
-      }
+      // Set to esperando_comida whenever a new order is received
+      await updateTableStatus(tableId, 'esperando_comida');
     } catch (e) {
       console.error("Error setting table active status", e);
     }
@@ -284,6 +289,9 @@ export default function ClientMobileApp() {
     setMesaNum("?");
     setActiveOrders([]);
     setCart([]);
+
+    // Hard refresh to reset the session view completely
+    window.location.href = '/';
   };
 
   const handleWaiterCall = async (type: 'pago' | 'cubiertos' | 'ayuda', label: string) => {
@@ -324,10 +332,21 @@ export default function ClientMobileApp() {
           <div className="bg-orange-50 hover:bg-orange-100 text-orange-600 p-2 rounded-full transition-colors relative group cursor-pointer" tabIndex={0}>
             <Bell className="w-6 h-6" />
             {/* Tooltip/Menu (Simplified for demo) */}
-            <div className="absolute right-0 top-12 bg-white shadow-xl rounded-xl p-2 hidden group-focus-within:block border w-56 z-50 cursor-default">
+            <div className="absolute right-0 top-12 bg-white shadow-xl rounded-xl p-2 hidden group-focus-within:block border w-64 z-50 cursor-default">
               <p className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase">Llamar Mesero</p>
-              <button onMouseDown={() => handleWaiterCall('pago', 'La Cuenta')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2"><ReceiptText className="w-4 h-4" /> Pedir la Cuenta</button>
-              <button onMouseDown={() => handleWaiterCall('ayuda', 'Asistencia general')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2"><HelpCircle className="w-4 h-4" /> Ayuda General</button>
+              <button onMouseDown={() => handleWaiterCall('pago', 'La Cuenta')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-2"><ReceiptText className="w-4 h-4" /> Pedir la Cuenta</button>
+
+              {!showHelpInput ? (
+                <button onMouseDown={(e) => { e.preventDefault(); setShowHelpInput(true); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2"><HelpCircle className="w-4 h-4" /> Ayuda General</button>
+              ) : (
+                <div className="px-2 pb-2">
+                  <input type="text" value={helpText} onChange={e => setHelpText(e.target.value)} placeholder="Ej. Servilletas, hielo, salsa..." className="w-full border border-gray-200 outline-none p-2 mb-2 rounded text-sm bg-gray-50" />
+                  <div className="flex gap-2">
+                    <button onMouseDown={() => { handleWaiterCall('ayuda', helpText || 'Asistencia general'); setShowHelpInput(false); setHelpText(''); }} className="flex-1 bg-orange-500 text-white rounded py-1 text-sm font-bold">Enviar</button>
+                    <button onMouseDown={(e) => { e.preventDefault(); setShowHelpInput(false); }} className="flex-1 bg-gray-200 text-gray-700 rounded py-1 text-sm font-bold hover:bg-gray-300">Cancelar</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -381,7 +400,11 @@ export default function ClientMobileApp() {
               {/* Product List */}
               <div className="p-4 flex flex-col gap-4">
                 {products
-                  .filter((p) => p.category_id === activeCategory && p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .filter((p) => {
+                    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                    if (searchQuery) return matchesSearch;
+                    return p.category_id === activeCategory;
+                  })
                   .map((product) => (
                     <div
                       key={product.id}
