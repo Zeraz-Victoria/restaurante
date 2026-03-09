@@ -83,6 +83,7 @@ export default function ClientMobileApp() {
   const [reviewText, setReviewText] = useState("");
   const [showHelpInput, setShowHelpInput] = useState(false);
   const [helpText, setHelpText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Order Tracking State
   type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado' };
@@ -220,7 +221,7 @@ export default function ClientMobileApp() {
   };
 
   const placeOrder = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isSubmitting) return;
 
     // Check if table session exists, else warn
     if (tableId === "unknown") {
@@ -228,54 +229,54 @@ export default function ClientMobileApp() {
       return;
     }
 
-    const orderData = {
-      mesa_id: tableId,
-      mesa_nombre: `Mesa ${mesaNum}`,
-      items: cart.map(item => ({
-        id: item.id,
-        name: item.product.name,
-        quantity: item.quantity,
-        modifiers: [
-          ...Object.values(item.selectedOptions),
-          ...item.selectedExtras,
-          ...(item.note ? [`Nota: ${item.note}`] : [])
-        ],
-        status: 'pending'
-      })),
-      total: cartTotal,
-      estado: 'pendiente',
-      is_addition: hasPreviousOrder,
-    };
-
-    const newOrder = await insertOrder(orderData);
-
-    // 4. Update UI State for ongoing experience
-    const newOrderId = (newOrder as any)?.id || (newOrder as any)?.[0]?.id || Math.random().toString(36).substr(2, 9);
-    const orderTitle = cart.length === 1 ? cart[0].product.name : `${cart.length} Productos`;
-
-    setCart([]); // Clean cart
-    setActiveTab('tracking'); // Send user to tracking tab
-
-    // --- Connect to Tables Logic ---
+    setIsSubmitting(true);
     try {
+      const orderData = {
+        mesa_id: tableId,
+        mesa_nombre: `Mesa ${mesaNum}`,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.product.name,
+          quantity: item.quantity,
+          modifiers: [
+            ...Object.values(item.selectedOptions),
+            ...item.selectedExtras,
+            ...(item.note ? [`Nota: ${item.note}`] : [])
+          ],
+          status: 'pending'
+        })),
+        total: cartTotal,
+        estado: 'pendiente',
+        is_addition: hasPreviousOrder,
+      };
+
+      const newOrder = await insertOrder(orderData);
+
+      // 4. Update UI State for ongoing experience
+      const newOrderId = (newOrder as any)?.id || (newOrder as any)?.[0]?.id || Math.random().toString(36).substr(2, 9);
+      const orderTitle = cart.length === 1 ? cart[0].product.name : `${cart.length} Productos`;
+
+      setCart([]); // Clean cart
+      setActiveTab('tracking'); // Send user to tracking tab
+
+      // --- Connect to Tables Logic ---
       // Set to esperando_comida whenever a new order is received
       await updateTableStatus(tableId, 'esperando_comida');
+
+      // Add to active orders array
+      setActiveOrders(prev => [...prev, { id: newOrderId, name: orderTitle, status: 'pendiente' }]);
+
+      // Always flag that this table has an active session from now on
+      setHasPreviousOrder(true);
     } catch (e) {
-      console.error("Error setting table active status", e);
+      console.error("Error setting table active status or inserting order", e);
+      alert("Hubo un error al procesar tu orden. Intenta nuevamente.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Add to active orders array
-    setActiveOrders(prev => [...prev, { id: newOrderId, name: orderTitle, status: 'pendiente' }]);
-
-    // Always flag that this table has an active session from now on
-    setHasPreviousOrder(true);
   };
 
-  // Handle Review Submission
-  const handleReviewSubmit = async () => {
-    if (reviewScore === 0) return;
-    await addReview(tableId, reviewScore, reviewText);
-
+  const clearSessionAndExit = () => {
     // Clear Local Session
     localStorage.removeItem('resto_session_table');
     localStorage.removeItem('resto_session_mesa_num');
@@ -291,7 +292,15 @@ export default function ClientMobileApp() {
     setCart([]);
 
     // Hard refresh to reset the session view completely
-    window.location.href = '/';
+    window.location.replace('/');
+  };
+
+  // Handle Review Submission
+  const handleReviewSubmit = async () => {
+    if (reviewScore > 0) {
+      await addReview(tableId, reviewScore, reviewText);
+    }
+    clearSessionAndExit();
   };
 
   const handleWaiterCall = async (type: 'pago' | 'cubiertos' | 'ayuda', label: string) => {
@@ -482,13 +491,13 @@ export default function ClientMobileApp() {
                     </div>
                   ))}
 
-                  {/* Action */}
                   <div className="pt-6">
                     <button
                       onClick={placeOrder}
-                      className="w-full bg-black text-white py-4 rounded-xl font-black text-lg flex justify-between px-6 shadow-xl active:scale-[0.98] transition-transform"
+                      disabled={isSubmitting}
+                      className="w-full bg-black hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-black text-lg flex justify-between px-6 shadow-xl active:scale-[0.98] transition-all"
                     >
-                      <span>Enviar a Cocina</span>
+                      <span>{isSubmitting ? "Procesando..." : "Enviar a Cocina"}</span>
                       <span>${cartTotal}</span>
                     </button>
                   </div>
@@ -750,9 +759,16 @@ export default function ClientMobileApp() {
               <button
                 disabled={reviewScore === 0}
                 onClick={handleReviewSubmit}
-                className="w-full py-4 rounded-xl font-black text-lg bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-all"
+                className="w-full py-4 rounded-xl font-black text-lg bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-50 shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-all mb-3"
               >
                 Enviar y Finalizar
+              </button>
+
+              <button
+                onClick={clearSessionAndExit}
+                className="w-full py-3 rounded-xl font-bold text-sm bg-transparent border border-white/10 hover:bg-white/5 text-gray-400 transition-all"
+              >
+                Omitir
               </button>
             </div>
           </div>

@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 import { Clock, Play, CheckCircle2, AlertTriangle, PlusCircle } from "lucide-react";
 import { useOrders } from "@/hooks/useOrders";
+import { useTables } from "@/hooks/useTables";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // --- Types ---
 type OrderStatus = 'pendiente' | 'cocinando' | 'listo';
 
 export default function KitchenDisplaySystemV2() {
     const { orders: dbOrders, updateOrderStatus } = useOrders();
+    const { updateTableStatus } = useTables();
+    const { sendNotification } = useNotifications();
     const [currentTime, setCurrentTime] = useState(new Date());
 
     // Update real-time clock every second for accurate overdue calculations
@@ -25,9 +29,19 @@ export default function KitchenDisplaySystemV2() {
         await updateOrderStatus(orderId, 'cocinando');
     };
 
-    const handleReadyToDeliver = async (orderId: string) => {
-        await updateOrderStatus(orderId, 'listo');
-        // In reality, this would trigger a WebSocket event to the Waiter panel.
+    const handleReadyToDeliver = async (order: any) => {
+        await updateOrderStatus(order.id, 'listo');
+
+        // Update table to 'comiendo' and notify Waiter
+        if (order.mesa_id) {
+            await updateTableStatus(order.mesa_id, 'comiendo');
+            await sendNotification({
+                tipo: 'cocina_listo',
+                mesa_id: order.mesa_id,
+                mensaje: `Orden para ${order.mesa_nombre || "Mesa"} lista para recoger`,
+                leido: false
+            });
+        }
     };
 
     return (
@@ -61,7 +75,7 @@ export default function KitchenDisplaySystemV2() {
                         order={order}
                         currentTime={currentTime}
                         onStart={() => handleStartCooking(order.id)}
-                        onReady={() => handleReadyToDeliver(order.id)}
+                        onReady={() => handleReadyToDeliver(order)}
                     />
                 ))}
 
