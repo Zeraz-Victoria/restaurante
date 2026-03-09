@@ -79,7 +79,7 @@ export function useOrders(initialMockOrders: any[] = []) {
     const insertOrder = async (orderData: any) => {
         const { data, error } = await supabase
             .from('ordenes')
-            .insert([{ ...orderData, marchado_tiempo_2: false }])
+            .insert([{ ...orderData }])
             .select();
 
         if (error) {
@@ -91,14 +91,31 @@ export function useOrders(initialMockOrders: any[] = []) {
     };
 
     const markTiempo2 = async (orderId: string) => {
+        // Optimistic UI
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, marchado_tiempo_2: true } : o));
 
-        const { error } = await supabase
-            .from('ordenes')
-            .update({ marchado_tiempo_2: true })
-            .eq('id', orderId);
+        // Find the current order to mutate its items JSON
+        const orderToUpdate = orders.find(o => o.id === orderId);
+        if (orderToUpdate && orderToUpdate.items) {
+            // We map over items, but instead of altering them, we just append a metadata flag
+            // or we can just send a flag inside the first item. Actually, let's just update all 
+            // items with tiempo 2 to have `marchado: true`
+            let updatedItems = [];
+            try {
+                let itemsArr = typeof orderToUpdate.items === 'string' ? JSON.parse(orderToUpdate.items) : orderToUpdate.items;
+                updatedItems = itemsArr.map((item: any) => item.tiempo === 2 ? { ...item, marchado: true } : item);
+            } catch (e) {
+                console.error("Failed to parse/update items JSON");
+                return;
+            }
 
-        if (error) console.error("Error updating marchado_tiempo_2:", error);
+            const { error } = await supabase
+                .from('ordenes')
+                .update({ items: updatedItems })
+                .eq('id', orderId);
+
+            if (error) console.error("Error updating marchado en items json:", error.message);
+        }
     };
 
     return { orders, updateOrderStatus, insertOrder, clearTableOrders, markTiempo2 };

@@ -102,6 +102,13 @@ function OrderCard({
         ? "bg-blue-600/90"
         : (isOverdue ? "bg-red-600 animate-pulse-fast" : "bg-[#252830]");
 
+    let itemsArray = [];
+    try {
+        itemsArray = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+    } catch (e) {
+        itemsArray = [];
+    }
+
     return (
         <div className={`flex flex-col rounded-2xl overflow-hidden border shadow-2xl transition-all duration-300 ${isOverdue ? "border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]" : "border-white/10"
             } bg-[#1a1d24]`}>
@@ -133,7 +140,7 @@ function OrderCard({
 
             {/* Order Items List */}
             <div className="p-2 flex-1 flex flex-col gap-2 relative">
-                {!order.marchado_tiempo_2 && (
+                {(!order.marchado_tiempo_2 && itemsArray.some((i: any) => i.tiempo === 2 && !i.marchado)) && (
                     <div className="absolute top-0 right-0 p-2 z-10 opacity-70">
                         <span className="text-[10px] font-bold bg-orange-500/20 text-orange-400 px-2 py-1 rounded border border-orange-500/30 uppercase tracking-widest">
                             Esperando Tiempos ▶
@@ -141,8 +148,8 @@ function OrderCard({
                     </div>
                 )}
 
-                {order.items
-                    ?.filter((item: any) => order.marchado_tiempo_2 || item.tiempo !== 2)
+                {itemsArray
+                    .filter((item: any) => order.marchado_tiempo_2 || item.marchado || item.tiempo !== 2)
                     .map((item: any) => (
                         <div
                             key={item.id}
