@@ -66,7 +66,7 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 ];
 
 export default function WaiterPanel() {
-    const [activeTab, setActiveTab] = useState<'map' | 'notifications'>('map');
+    // Retiramos activeTab, el dashboard ahora es unificado
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
     // Supabase Real-time Hooks (sin mocks — datos reales)
@@ -75,6 +75,8 @@ export default function WaiterPanel() {
     const { orders, clearTableOrders } = useOrders();
 
     const unreadCount = notifications.filter(n => !n.leido).length;
+    // Sort notifications so unread are first
+    const activeNotifications = [...notifications].sort((a, b) => Number(a.leido) - Number(b.leido));
 
     // Helpers
     const getStatusStyles = (status: TableStatus) => {
@@ -124,13 +126,35 @@ export default function WaiterPanel() {
 
         // Reset table estado si era alerta
         const t = tables.find(t => t.id === mesaId);
-        if (t && (t.estado === 'necesita_ayuda' || t.estado === 'esperando_comida')) {
+        if (t && (t.estado === 'necesita_ayuda' || t.estado === 'esperando_comida' || t.estado === "pidiendo_cuenta")) {
             await updateTableStatus(mesaId, 'comiendo');
         }
     };
 
+    // ----- SMART SORTING LÓGICA -----
+    const getStatusPriority = (status: TableStatus): number => {
+        switch (status) {
+            case 'necesita_ayuda': return 1;    // URGENCE MAX (Red)
+            case 'pidiendo_cuenta': return 2;   // URGENCE HIGH (Purple)
+            case 'esperando_comida': return 3;  // URGENCE MED (Yellow)
+            case 'comiendo': return 4;          // OK (Blue)
+            case 'libre': return 5;             // LOWEST (Gray)
+            default: return 6;
+        }
+    };
+
+    const sortedTables = [...tables].sort((a, b) => {
+        const priorityAvgA = getStatusPriority(a.estado);
+        const priorityAvgB = getStatusPriority(b.estado);
+        if (priorityAvgA === priorityAvgB) {
+            return a.numero - b.numero; // Tie-breaker by number
+        }
+        return priorityAvgA - priorityAvgB;
+    });
+    // ---------------------------------
+
     return (
-        <div className="min-h-screen bg-[#0f1115] text-white font-sans select-none pb-20 md:pb-0 flex flex-col md:flex-row">
+        <div className="min-h-screen bg-[#0f1115] text-white font-sans select-none pb-8 md:pb-0 flex flex-col md:flex-row">
 
             {/* Sidebar / Top Nav (Mobile) */}
             <nav className="fixed md:static bottom-0 w-full md:w-24 bg-[#1a1d24] border-t md:border-r border-white/5 flex md:flex-col justify-around md:justify-start items-center p-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:min-h-screen">
@@ -138,125 +162,104 @@ export default function WaiterPanel() {
                     <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">W</div>
                 </div>
 
-                <button
-                    onClick={() => setActiveTab('map')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${activeTab === 'map' ? 'bg-[#2a2e39] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                >
+                <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#2a2e39] text-white transition-all">
                     <Utensils className="w-6 h-6" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest hidden md:block">Mapa</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('notifications')}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all relative md:mt-4 ${activeTab === 'notifications' ? 'bg-[#2a2e39] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                    <div className="relative">
-                        <BellRing className={`w-6 h-6 ${unreadCount > 0 ? 'animate-bounce' : ''}`} />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[#1a1d24]">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest hidden md:block">Alertas</span>
-                </button>
+                    <span className="text-[10px] font-bold uppercase tracking-widest hidden md:block">Mesas</span>
+                </div>
             </nav>
 
             {/* Main Content Area */}
             <main className="flex-1 p-4 md:p-8 max-h-screen overflow-y-auto w-full">
 
-                {/* Header */}
-                <header className="mb-8 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                            {activeTab === 'map' ? 'Mapa de Salón' : 'Alertas Push'}
-                            {activeTab === 'notifications' && unreadCount > 0 && (
-                                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold uppercase animate-pulse">
-                                    {unreadCount} Nuevas
+                {/* --- CENTRO DE NOTIFICACIONES HORIZONTAL --- */}
+                {unreadCount > 0 && (
+                    <div className="mb-8 animate-in mt-4 md:mt-0 slide-in-from-top-6 duration-500">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-black flex items-center gap-3">
+                                <BellRing className="w-6 h-6 text-red-500 animate-pulse" />
+                                Alertas Activas
+                                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                                    {unreadCount}
                                 </span>
-                            )}
-                        </h1>
-                        <p className="text-gray-400 font-medium mt-1">
-                            {activeTab === 'map' ? 'Vista en tiempo real de las mesas' : 'Centro de Control de Entregas y Solicitudes'}
-                        </p>
-                    </div>
-                    {/* Status Legend (Hidden on small mobile) */}
-                    {activeTab === 'map' && (
-                        <div className="hidden lg:flex gap-4 p-3 bg-[#1a1d24] rounded-2xl border border-white/5">
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Comiendo</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Esperando</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Ayuda</span></div>
-                            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Cuenta</span></div>
+                            </h2>
                         </div>
-                    )}
-                </header>
-
-                {/* --- MAPA DE MESAS --- */}
-                {activeTab === 'map' && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:max-w-5xl mx-auto animate-in fade-in zoom-in-95 duration-300">
-                        {tables.map(table => (
-                            <button
-                                key={table.id}
-                                onClick={() => setSelectedTableId(table.id)}
-                                className={`w-full aspect-square md:aspect-[4/3] rounded-3xl p-4 md:p-6 border-2 flex flex-col justify-between items-start transition-all hover:scale-[1.02] active:scale-95 ${getStatusStyles(table.estado)}`}
-                            >
-                                <div className="flex justify-between w-full">
-                                    <span className="text-4xl md:text-5xl font-black">{table.numero}</span>
-                                    {getStatusIcon(table.estado)}
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold text-sm md:text-base uppercase tracking-wider">{getStatusLabel(table.estado)}</p>
-                                    {table.guests > 0 && <p className="text-xs opacity-70 mt-1 font-medium">{table.guests} pax</p>}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* --- CENTRO DE NOTIFICACIONES --- */}
-                {activeTab === 'notifications' && (
-                    <div className="max-w-3xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-300">
-                        {notifications.length === 0 ? (
-                            <div className="text-center py-20 text-gray-500">
-                                <Info className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                                <h3 className="text-xl font-bold">Todo tranquilo</h3>
-                                <p>No hay alertas pendientes.</p>
-                            </div>
-                        ) : (
-                            notifications.sort((a, b) => Number(a.leido) - Number(b.leido)).map(notif => (
+                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                            {activeNotifications.filter(n => !n.leido).map(notif => (
                                 <div
                                     key={notif.id}
-                                    className={`p-4 md:p-6 rounded-2xl border transition-all flex items-center gap-4 md:gap-6 ${notif.leido
-                                        ? "bg-[#1f222a] border-white/5 opacity-50"
-                                        : "bg-[#252830] border-white/10 shadow-lg"
-                                        }`}
+                                    className="snap-start min-w-[280px] md:min-w-[320px] p-4 rounded-2xl bg-[#252830] border border-red-500/30 shadow-[0_5px_20px_rgba(239,68,68,0.1)] flex items-center gap-4 animate-in zoom-in-95 duration-200"
                                 >
-                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 shadow-inner ${notif.leido ? "bg-[#111318]" : "bg-[#1a1d24]"
-                                        }`}>
+                                    <div className="w-12 h-12 rounded-full bg-[#111318] flex items-center justify-center shrink-0 shadow-inner">
                                         {getNotifIcon(notif.tipo)}
                                     </div>
-
                                     <div className="flex-1">
-                                        <p className={`font-medium ${notif.leido ? 'text-gray-400' : 'text-gray-100 text-lg'}`}>{notif.mensaje}</p>
-                                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-1">
+                                        <p className="font-bold text-gray-100 text-sm leading-tight">{notif.mensaje}</p>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">
                                             {typeof notif.created_at === 'string' ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (notif.created_at as Date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
-
-                                    {!notif.leido && (
-                                        <button
-                                            onClick={() => handleResolveNotification(notif.id, notif.mesa_id)}
-                                            className="w-12 h-12 md:w-auto md:px-6 rounded-xl bg-[#2a2e39] hover:bg-[#353946] border border-white/10 flex items-center justify-center text-sm font-bold uppercase tracking-wider gap-2 transition-colors shrink-0"
-                                        >
-                                            <Check className="w-5 h-5 text-gray-400" />
-                                            <span className="hidden md:block">Resolver</span>
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => handleResolveNotification(notif.id, notif.mesa_id)}
+                                        className="w-10 h-10 rounded-full bg-black/40 hover:bg-green-500/20 text-gray-400 hover:text-green-400 border border-white/5 hover:border-green-500/50 flex items-center justify-center transition-all shrink-0"
+                                        title="Marcar como Resuelto"
+                                    >
+                                        <Check className="w-5 h-5" />
+                                    </button>
                                 </div>
-                            ))
-                        )}
+                            ))}
+                        </div>
                     </div>
                 )}
+
+
+                {/* MAP HEADER */}
+                <header className="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 mt-8">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+                            Mapa de Salón
+                        </h1>
+                        <p className="text-gray-400 font-medium mt-1">
+                            Ordenado por prioridad de atención en tiempo real.
+                        </p>
+                    </div>
+                    {/* Status Legend */}
+                    <div className="flex gap-3 overflow-x-auto p-3 bg-[#1a1d24] rounded-2xl border border-white/5 scrollbar-hide">
+                        <div className="flex items-center gap-2 whitespace-nowrap"><div className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Ayuda</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap"><div className="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Cuenta</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap"><div className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Esperando</span></div>
+                        <div className="flex items-center gap-2 whitespace-nowrap"><div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div><span className="text-xs text-gray-400 font-bold uppercase">Comiendo</span></div>
+                    </div>
+                </header>
+
+                {/* --- MAPA DE MESAS (Smart Sorted) --- */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:max-w-6xl mx-auto animate-in fade-in duration-500">
+                    <div className="col-span-full mb-2">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2">↓ Mayor Prioridad</span>
+                    </div>
+                    {sortedTables.map((table, index) => (
+                        <button
+                            key={table.id}
+                            style={{
+                                animationDelay: `${index * 50}ms`,
+                                animationFillMode: 'both'
+                            }}
+                            onClick={() => setSelectedTableId(table.id)}
+                            className={`w-full aspect-square md:aspect-[4/3] rounded-3xl p-4 md:p-6 border-2 flex flex-col justify-between items-start transition-all hover:-translate-y-1 hover:shadow-xl active:scale-95 animate-in zoom-in-95 slide-in-from-bottom-4 ${getStatusStyles(table.estado)} ${table.estado === 'libre' ? 'opacity-60 scale-95 grayscale hover:grayscale-0 hover:opacity-100 hover:scale-100' : ''}`}
+                        >
+                            <div className="flex justify-between w-full">
+                                <span className={`${table.estado === 'libre' ? 'text-3xl' : 'text-4xl md:text-5xl'} font-black transition-all`}>{table.numero}</span>
+                                {getStatusIcon(table.estado)}
+                            </div>
+                            <div className="text-left w-full">
+                                <p className="font-bold text-xs md:text-sm uppercase tracking-wider truncate w-full">{getStatusLabel(table.estado)}</p>
+                                {table.guests > 0 && <p className="text-[10px] opacity-70 mt-1 font-bold">{table.guests} INVITADOS</p>}
+                            </div>
+                        </button>
+                    ))}
+                    <div className="col-span-full mt-4 text-right">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest pr-2">Menor Prioridad ↑</span>
+                    </div>
+                </div>
 
             </main>
 
