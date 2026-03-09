@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useOrders } from "@/hooks/useOrders";
 import { useTables } from "@/hooks/useTables";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
     LayoutDashboard,
     TrendingUp,
@@ -38,6 +39,8 @@ import WaiterPanel from "@/app/waiter/page";
 
 export default function AdminDashboard() {
     const { products, categorias, addProduct, updateProduct, deleteProduct, loading, addCategoria, updateCategoria, deleteCategoria, refresh } = useProducts();
+    const { notifications } = useNotifications();
+    const unreadCount = notifications.filter(n => !n.leido).length;
 
     const [staff, setStaff] = useState([
         { id: 1, name: "Carlos López", role: "Mesero", pin: "****", status: "Activo" },
@@ -326,26 +329,26 @@ export default function AdminDashboard() {
                         Personal
                     </button>
                     <button
-                        onClick={() => setActiveTab('waiter')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'waiter' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                    >
-                        <UtensilsCrossed className="w-5 h-5" />
-                        Operativo (Meseros)
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('reports')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'reports' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                    >
-                        <Activity className="w-5 h-5" />
-                        Analítica Predictiva
-                    </button>
-                    <button
                         onClick={() => setActiveTab('reviews')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'reviews' ? 'bg-orange-600 shadow-[0_0_20px_rgba(234,88,12,0.3)] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'reviews' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
                         <Star className="w-5 h-5" />
                         Reseñas de Clientes
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('waiter')}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all relative ${activeTab === 'waiter' ? 'bg-orange-600 shadow-[0_0_20px_rgba(234,88,12,0.3)] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/5'}`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <UtensilsCrossed className="w-5 h-5" />
+                            Operación (Sala)
+                        </div>
+                        {unreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                {unreadCount}
+                            </span>
+                        )}
                     </button>
                 </nav>
 
