@@ -49,8 +49,9 @@ export function useProducts() {
         fetchData();
 
         // Optional realtime hook for products
+        const channelName = `public:productos-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
-            .channel('public:productos')
+            .channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
                 fetchData(); // Refresh all on any change
             })

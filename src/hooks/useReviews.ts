@@ -28,8 +28,9 @@ export function useReviews() {
         fetchReviews();
 
         // Optional realtime hook
+        const channelName = `resenas-realtime-${Math.random().toString(36).substring(7)}`;
         const subscription = supabase
-            .channel('resenas-realtime')
+            .channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'resenas' }, payload => {
                 if (payload.eventType === 'INSERT') {
                     setReviews(prev => [payload.new as Review, ...prev]);

@@ -20,8 +20,9 @@ export function useNotifications(initialMockNotifs: any[] = []) {
 
         fetchNotifs();
 
+        const channelName = `solicitudes-realtime-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
-            .channel('solicitudes-realtime')
+            .channel(channelName)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'solicitudes_ayuda' }, payload => {
                 console.log('Realtime INSERT in solicitudes_ayuda:', payload);
                 setNotifications(prev => [payload.new, ...prev]);

@@ -329,6 +329,13 @@ export default function AdminDashboard() {
                         Personal
                     </button>
                     <button
+                        onClick={() => setActiveTab('reports')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'reports' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <TrendingUp className="w-5 h-5" />
+                        Analítica Predictiva
+                    </button>
+                    <button
                         onClick={() => setActiveTab('reviews')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'reviews' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}

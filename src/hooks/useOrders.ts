@@ -32,8 +32,9 @@ export function useOrders(initialMockOrders: any[] = []) {
         fetchOrders();
 
         // Subscribe to real-time changes
+        const channelName = `ordenes-realtime-${Math.random().toString(36).substring(7)}`;
         const subscription = supabase
-            .channel('ordenes-realtime')
+            .channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, payload => {
                 console.log('Realtime change in ordenes:', payload);
                 if (payload.eventType === 'INSERT') {

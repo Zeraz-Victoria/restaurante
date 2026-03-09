@@ -20,8 +20,9 @@ export function useTables(initialMockTables: any[] = []) {
 
         fetchTables();
 
+        const channelName = `mesas-realtime-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
-            .channel('mesas-realtime')
+            .channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, payload => {
                 console.log('Realtime change in mesas:', payload);
                 if (payload.eventType === 'UPDATE') {
