@@ -34,6 +34,8 @@ import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import WaiterPanel from "@/app/waiter/page";
+
 export default function AdminDashboard() {
     const { products, categorias, addProduct, updateProduct, deleteProduct, loading, addCategoria, updateCategoria, deleteCategoria, refresh } = useProducts();
 
@@ -64,14 +66,30 @@ export default function AdminDashboard() {
         const description = formData.get('description') as string;
         let image_url = currentImageUrl;
 
+        // Extract ingredients dynamically from the DOM (or state, but DOM is easier here with the current formData pattern)
+        const ingredientsList: any[] = [];
+        const ingNames = formData.getAll('ing_name');
+        const ingQtys = formData.getAll('ing_qty');
+        const ingUnits = formData.getAll('ing_unit');
+
+        for (let i = 0; i < ingNames.length; i++) {
+            if (ingNames[i]) {
+                ingredientsList.push({
+                    name: ingNames[i],
+                    quantity: Number(ingQtys[i]) || 1,
+                    unit: ingUnits[i]
+                });
+            }
+        }
+
         // Ensure we don't save empty strings if user didn't provide image
         if (!image_url || image_url.trim() === '') image_url = '';
 
         try {
             if (editingProduct) {
-                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url });
+                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url, ingredients: ingredientsList });
             } else {
-                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita' });
+                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList });
             }
             setIsMenuModalOpen(false);
         } catch (error) {
@@ -218,10 +236,15 @@ export default function AdminDashboard() {
         alert(`Generando y descargando PDF con QR para la Mesa ${mesaNum}...`);
     };
 
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews' | 'waiter'>('dashboard');
+    const [reportInterval, setReportInterval] = useState('semanal');
+
+    // Ingredients dynamic state for the modal
+    const [tempIngredients, setTempIngredients] = useState<any[]>([]);
+
     const { orders } = useOrders();
     const { tables, addTable, deleteTable } = useTables();
-    const { estrellas, vacas, perros, resurtido } = useAnalytics(products);
+    const { estrellas, vacas, perros, resurtido } = useAnalytics(products, reportInterval);
     const { reviews } = useReviews();
 
     // UI States
@@ -235,20 +258,26 @@ export default function AdminDashboard() {
         }
     }, []);
 
-    // --- KPIs Calculations ---
-    const today = new Date().toISOString().split('T')[0];
+    // --- KPIs Calculations (Filtered strictly for TODAY) ---
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    // Total Vendido Hoy (Summing all orders, assuming for Demo they are all today)
-    const totalSales = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
+    const todaysOrders = orders.filter(o => {
+        if (!o.created_at) return false;
+        // Check if the order's created_at starts with today's date string
+        return o.created_at.startsWith(todayStr);
+    });
+
+    // Total Vendido Hoy
+    const totalSales = todaysOrders.reduce((acc, curr) => acc + (curr.total || 0), 0);
 
     // Total Orders count
-    const totalOrders = orders.length;
+    const totalOrders = todaysOrders.length;
 
     // Average Ticket
     const avgTicket = totalOrders > 0 ? (totalSales / totalOrders).toFixed(2) : "0.00";
 
-    // Active items in kitchen
-    const activeKitchenItems = orders
+    // Active items in kitchen (From Today's Orders)
+    const activeKitchenItems = todaysOrders
         .filter(o => o.estado === 'pendiente' || o.estado === 'cocinando')
         .reduce((acc, curr) => acc + (curr.items?.length || 0), 0);
 
@@ -297,6 +326,13 @@ export default function AdminDashboard() {
                         Personal
                     </button>
                     <button
+                        onClick={() => setActiveTab('waiter')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'waiter' ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <UtensilsCrossed className="w-5 h-5" />
+                        Operativo (Meseros)
+                    </button>
+                    <button
                         onClick={() => setActiveTab('reports')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'reports' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                     >
@@ -335,6 +371,7 @@ export default function AdminDashboard() {
                             {activeTab === 'menu' && 'Gestor de Menú e Inventario'}
                             {activeTab === 'qr' && 'Gestor QR de Mesas'}
                             {activeTab === 'staff' && 'Control de Personal'}
+                            {activeTab === 'waiter' && 'Operación (Sala y Meseros)'}
                             {activeTab === 'reports' && 'Analítica Predictiva'}
                             {activeTab === 'reviews' && 'Reseñas de Clientes'}
                         </h2>
@@ -434,7 +471,7 @@ export default function AdminDashboard() {
                                     <Plus className="w-5 h-5" /> Categoría
                                 </button>
                                 <button
-                                    onClick={() => { setEditingProduct(null); setCurrentImageUrl(''); setIsMenuModalOpen(true); }}
+                                    onClick={() => { setEditingProduct(null); setCurrentImageUrl(''); setTempIngredients([]); setIsMenuModalOpen(true); }}
                                     className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-colors"
                                 >
                                     <Plus className="w-5 h-5" /> Platillo
@@ -483,7 +520,7 @@ export default function AdminDashboard() {
                                             <td className="p-4 font-black text-green-400">${prod.price}</td>
                                             <td className="p-4 font-bold text-gray-500">${prod.cost}</td>
                                             <td className="p-4 flex gap-3 justify-end items-center h-[72px]">
-                                                <button onClick={() => { setEditingProduct(prod); setCurrentImageUrl(prod.image_url || ''); setIsMenuModalOpen(true); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={() => { setEditingProduct(prod); setCurrentImageUrl(prod.image_url || ''); setTempIngredients(prod.ingredients || []); setIsMenuModalOpen(true); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20"><Edit2 className="w-4 h-4" /></button>
                                                 <button onClick={() => handleDeleteProduct(prod.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
                                             </td>
                                         </tr>
@@ -597,16 +634,41 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
+                {/* --- WAITER EMBEDDED TAB --- */}
+                {activeTab === 'waiter' && (
+                    <div className="w-full h-full bg-[#0f1115] rounded-3xl overflow-hidden border border-white/5">
+                        {/* Notice that WaiterPanel acts standalone, we just wrap it */}
+                        <div className="h-[800px] w-full overflow-y-auto custom-scrollbar">
+                            <WaiterPanel />
+                        </div>
+                    </div>
+                )}
+
                 {/* --- REPORTS TAB --- */}
                 {activeTab === 'reports' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {/* Title */}
-                        <div>
-                            <h3 className="text-2xl font-black flex items-center gap-3">
-                                <Activity className="w-8 h-8 text-purple-500" />
-                                Analítica Predictiva
-                            </h3>
-                            <p className="text-gray-400 mt-2">Basado en el cruce de ventas vs costo de receta (Matriz BCG).</p>
+                        {/* Title & Controls */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-2xl font-black flex items-center gap-3">
+                                    <Activity className="w-8 h-8 text-purple-500" />
+                                    Analítica Predictiva
+                                </h3>
+                                <p className="text-gray-400 mt-2">Basado en el cruce de ventas vs costo de receta configurada.</p>
+                            </div>
+                            <div className="flex items-center gap-2 bg-[#111216] border border-white/5 p-2 rounded-xl">
+                                <span className="text-sm font-bold text-gray-400 px-2">Calcular para:</span>
+                                <select
+                                    value={reportInterval}
+                                    onChange={(e) => setReportInterval(e.target.value)}
+                                    className="bg-black border border-white/10 rounded-lg px-3 py-1 text-white focus:outline-none focus:border-purple-500"
+                                >
+                                    <option value="diario">Hoy</option>
+                                    <option value="semanal">Últimos 7 Días</option>
+                                    <option value="quincenal">Últimos 15 Días</option>
+                                    <option value="mensual">Últimos 30 Días</option>
+                                </select>
+                            </div>
                         </div>
 
                         {/* Rentability Matrix */}
@@ -715,12 +777,12 @@ export default function AdminDashboard() {
                 {/* --- MODALS --- */}
                 {isMenuModalOpen && (
                     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                        <div className="bg-[#111216] border border-white/10 rounded-3xl w-full max-w-md p-6 relative shadow-2xl">
+                        <div className="bg-[#111216] border border-white/10 rounded-3xl w-full max-w-2xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh] hide-scrollbar">
                             <button onClick={() => setIsMenuModalOpen(false)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 rounded-full transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
-                            <h3 className="text-2xl font-black mb-6">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-                            <form onSubmit={handleSaveProduct} className="space-y-4">
+                            <h3 className="text-2xl font-black mb-6">{editingProduct ? 'Editar Producto / Receta' : 'Nuevo Producto / Receta'}</h3>
+                            <form onSubmit={handleSaveProduct} className="space-y-6">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-400 mb-1">Nombre del Platillo</label>
                                     <input required name="name" defaultValue={editingProduct?.name || ''} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors placeholder:text-gray-600" placeholder="Ej. Tacos al Pastor" />
@@ -763,6 +825,47 @@ export default function AdminDashboard() {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* ---------------- INGREDIENTS RECIPE BUILDER ---------------- */}
+                                <div className="border-t border-white/10 pt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h4 className="font-black text-lg text-white">Receta Predictiva</h4>
+                                            <p className="text-xs text-gray-400">Añade los insumos exactos para que la IA calcule con precisión tu resurtido de compras.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTempIngredients([...tempIngredients, { id: Date.now(), name: '', quantity: 1, unit: 'Gramos' }])}
+                                            className="bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-500/30 transition-colors flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Añadir Insumo
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-hide">
+                                        {tempIngredients.length === 0 ? (
+                                            <p className="text-sm text-gray-500 italic text-center py-4 bg-white/[0.02] rounded-xl border border-white/5">Sin insumos. La IA deducirá por genéricos.</p>
+                                        ) : tempIngredients.map((ing, idx) => (
+                                            <div key={ing.id || idx} className="flex gap-2 items-center bg-white/[0.02] p-2 rounded-xl border border-white/5">
+                                                <input required name="ing_name" defaultValue={ing.name} placeholder="Ej. Carne de Res" className="flex-2 bg-black/50 border border-white/10 w-full min-w-[120px] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
+                                                <input required type="number" step="0.01" name="ing_qty" defaultValue={ing.quantity} placeholder="Cant" className="w-20 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500" />
+                                                <select required name="ing_unit" defaultValue={ing.unit} className="w-28 bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-purple-500 appearance-none">
+                                                    <option value="Gramos">Gramos</option>
+                                                    <option value="Kilos">Kilos</option>
+                                                    <option value="Litros">Litros</option>
+                                                    <option value="Mililitros">Mililitros</option>
+                                                    <option value="Piezas">Piezas</option>
+                                                    <option value="Latas">Latas</option>
+                                                    <option value="Paquetes">Paquetes</option>
+                                                    <option value="Rebanadas">Rebanadas</option>
+                                                </select>
+                                                <button type="button" onClick={() => setTempIngredients(tempIngredients.filter((_, i) => i !== idx))} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* ----------------------------------------------------------- */}
+
                                 <div className="pt-4 flex gap-3">
                                     <button type="button" onClick={() => setIsMenuModalOpen(false)} className="flex-1 py-3 px-4 rounded-xl font-bold bg-white/5 hover:bg-white/10 transition-colors">Cancelar</button>
                                     <button type="submit" className="flex-1 py-3 px-4 rounded-xl font-bold bg-orange-600 hover:bg-orange-500 text-white shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-colors">Guardar</button>

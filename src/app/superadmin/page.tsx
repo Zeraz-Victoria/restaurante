@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Building2,
     CreditCard,
@@ -36,6 +36,16 @@ const PLANS = [
 export default function SuperAdminDashboard() {
     const [activeView, setActiveView] = useState('tenants'); // 'tenants' | 'plans' | 'support'
     const [searchQuery, setSearchQuery] = useState('');
+    const [themeColor, setThemeColor] = useState('#ea580c'); // Default Orange-600
+
+    useEffect(() => {
+        // Apply dynamic CSS variables for theming to the document body
+        const root = document.documentElement;
+        root.style.setProperty('--theme-color', themeColor);
+        // We can add a simple logic to adjust hover states or lighter variants
+        root.style.setProperty('--theme-color-hover', `${themeColor}cc`);
+        root.style.setProperty('--theme-color-light', `${themeColor}22`);
+    }, [themeColor]);
 
     return (
         <div className="flex bg-[#f3f4f6] min-h-screen text-[#111827] font-sans">
@@ -129,6 +139,7 @@ export default function SuperAdminDashboard() {
                                             <th className="px-6 py-3 font-semibold">Restaurante</th>
                                             <th className="px-6 py-3 font-semibold">Estado</th>
                                             <th className="px-6 py-3 font-semibold">Plan Actual</th>
+                                            <th className="px-6 py-3 font-semibold">Tema App</th>
                                             <th className="px-6 py-3 font-semibold">Usuarios (Staff)</th>
                                             <th className="px-6 py-3 font-semibold">Registrado</th>
                                             <th className="px-6 py-3 text-right">Acciones</th>
@@ -145,6 +156,10 @@ export default function SuperAdminDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-[#4b5563]">{tenant.plan}</td>
+                                                <td className="px-6 py-4 flex items-center gap-2">
+                                                    <div className="w-4 h-4 rounded-full border border-gray-300 shadow-sm" style={{ backgroundColor: tenant.id === '1' ? '#ea580c' : tenant.id === '2' ? '#2563eb' : '#16a34a' }}></div>
+                                                    <span className="text-xs text-gray-500 uppercase font-mono">{tenant.id === '1' ? '#ea580c' : tenant.id === '2' ? '#2563eb' : '#16a34a'}</span>
+                                                </td>
                                                 <td className="px-6 py-4 text-[#4b5563]">{tenant.users}</td>
                                                 <td className="px-6 py-4 text-[#4b5563]">{tenant.joined}</td>
                                                 <td className="px-6 py-4 text-right">
@@ -211,8 +226,8 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
         <button
             onClick={onClick}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium ${active
-                    ? "bg-[#f3f4f6] text-[#111827]"
-                    : "text-[#4b5563] hover:bg-[#f9fafb] hover:text-[#111827]"
+                ? "bg-[#f3f4f6] text-[#111827]"
+                : "text-[#4b5563] hover:bg-[#f9fafb] hover:text-[#111827]"
                 }`}
         >
             <span className={active ? "text-[#111827]" : "text-[#9ca3af]"}>

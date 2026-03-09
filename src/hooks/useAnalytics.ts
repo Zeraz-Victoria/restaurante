@@ -10,16 +10,27 @@ export interface AnalyticsData {
     resurtido: any[];
 }
 
-export function useAnalytics(products: Product[]) {
+export function useAnalytics(products: Product[], interval: string = 'semanal') {
     const [allOrders, setAllOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchHistoricalOrders = async () => {
-            // Fetch all orders from the current month for analytics
+            // Determine the start date string based on interval
+            const now = new Date();
+            let daysToSubtract = 7; // default semanal
+            if (interval === 'diario') daysToSubtract = 1; /* Note: 1 day here means last 24h, or 'today' equivalent. Below we can constrain more exactly if needed. */
+            else if (interval === 'quincenal') daysToSubtract = 15;
+            else if (interval === 'mensual') daysToSubtract = 30;
+
+            now.setDate(now.getDate() - daysToSubtract);
+            const startDateStr = now.toISOString();
+
+            // Fetch orders matching the timeframe
             const { data, error } = await supabase
                 .from('ordenes')
-                .select('items, created_at');
+                .select('items, created_at')
+                .gte('created_at', startDateStr);
 
             if (data) setAllOrders(data);
             if (error) console.log("Error fetch all orders for analytics:", error.message);
@@ -100,32 +111,73 @@ export function useAnalytics(products: Product[]) {
             else perros.push(p);
         });
 
-        // 4. Fake AI Restock logic purely based on volume map
-        // Find top selling products and suggest ingredients
-        const sortedByVolume = [...productStats].sort((a, b) => b.volume - a.volume);
-        const topSellers = sortedByVolume.slice(0, 3).filter(p => p.volume > 0);
+        // 4. Exact AI Restock Logic based on ingredient mappings and volume
+        type AggregationMap = Record<string, { unit: string; totalQuantity: number; itemNames: Set<string>; isCritial: boolean }>;
+        const totalIngredientsNeeded: AggregationMap = {};
 
-        const resurtido = topSellers.map(p => {
-            // Heuristic matching for demo
-            let ing = "Ingredientes para " + p.name;
-            let qty = (p.volume * 2) + " Unidades";
-            let state = "red"; // high turnover
+        let hasNoRecipeConfigData = true;
 
-            if (p.name.toLowerCase().includes('taco') || p.name.toLowerCase().includes('pastor')) {
-                ing = "Carne al Pastor / Tortillas"; qty = "15 Kg";
-            } else if (p.name.toLowerCase().includes('hamburguesa')) {
-                ing = "Carne de Res / Pan Brioche"; qty = "20 Paquetes";
-            } else if (p.name.toLowerCase().includes('agua') || p.name.toLowerCase().includes('refresco')) {
-                ing = "Bebidas / Hielo"; qty = "10 Cajas"; state = "yellow";
+        productStats.forEach(p => {
+            if (p.volume > 0 && p.ingredients && p.ingredients.length > 0) {
+                hasNoRecipeConfigData = false;
+                p.ingredients.forEach(ing => {
+                    const key = `${ing.name.toLowerCase().trim()}_${ing.unit.toLowerCase().trim()}`;
+                    if (!totalIngredientsNeeded[key]) {
+                        totalIngredientsNeeded[key] = { unit: ing.unit, totalQuantity: 0, itemNames: new Set(), isCritial: false };
+                    }
+                    totalIngredientsNeeded[key].totalQuantity += (ing.quantity * p.volume);
+                    totalIngredientsNeeded[key].itemNames.add(p.name);
+
+                    // simple heuristic: if top sellers rely on this, mark critical
+                    if (p.volume >= medianVolume) {
+                        totalIngredientsNeeded[key].isCritial = true;
+                    }
+                });
             }
-
-            return { productId: p.id, name: ing, reason: `Alta rotación por ventas de "${p.name}" (${p.volume} vendidos).`, suggestion: qty, severity: state };
         });
 
-        // If no sales at all yet, show some placeholders so the UI isn't broken
-        if (resurtido.length === 0) {
-            resurtido.push({ productId: "fallback-1", name: "Carne Premium", reason: "Stock preventivo de fin de semana.", suggestion: "10 Kg", severity: "yellow" });
-            resurtido.push({ productId: "fallback-2", name: "Cebolla y Cilantro", reason: "Uso constante en la mayoría de platillos.", suggestion: "5 Manojo", severity: "green" });
+        const resurtido: any[] = [];
+
+        if (!hasNoRecipeConfigData) {
+            Object.values(totalIngredientsNeeded).forEach(ing => {
+                // Get arbitrary name from one of the keys or format nicely
+                const nameParts = Array.from(ing.itemNames);
+                const nameDesc = nameParts.length > 2 ? `${nameParts[0]}, ${nameParts[1]} y más` : nameParts.join(' y ');
+
+                resurtido.push({
+                    productId: Math.random().toString(), // fake id 
+                    name: "Ingredientes para " + nameDesc,
+                    reason: `Basado en ${ing.itemNames.size} producto(s) vendido(s) con este insumo.`,
+                    suggestion: `${ing.totalQuantity.toLocaleString()} ${ing.unit}`,
+                    severity: ing.isCritial ? 'red' : 'yellow'
+                });
+            });
+            // Sort by quantity desc to mimic priority
+            resurtido.sort((a, b) => parseFloat(b.suggestion) - parseFloat(a.suggestion));
+        } else {
+            // Fallback if NO products have ingredients configured yet
+            const sortedByVolume = [...productStats].sort((a, b) => b.volume - a.volume);
+            const topSellers = sortedByVolume.slice(0, 3).filter(p => p.volume > 0);
+
+            topSellers.forEach(p => {
+                let ing = "Ingredientes genéricos para " + p.name;
+                let qty = (p.volume * 2) + " Unidades";
+                let state = "red";
+
+                if (p.name.toLowerCase().includes('taco') || p.name.toLowerCase().includes('pastor')) {
+                    ing = "Carne al Pastor / Tortillas"; qty = "15 Kg";
+                } else if (p.name.toLowerCase().includes('hamburguesa')) {
+                    ing = "Carne de Res / Pan Brioche"; qty = "20 Paquetes";
+                } else if (p.name.toLowerCase().includes('agua') || p.name.toLowerCase().includes('refresco')) {
+                    ing = "Bebidas / Hielo"; qty = "10 Cajas"; state = "yellow";
+                }
+                resurtido.push({ productId: p.id, name: ing, reason: `Configura la receta de este platillo para más precisión.`, suggestion: qty, severity: state });
+            });
+
+            // If no sales at all yet
+            if (resurtido.length === 0) {
+                resurtido.push({ productId: "fallback-1", name: "Insumos Varios", reason: "Falta configuración de recetas y de ventas.", suggestion: "0", severity: "green" });
+            }
         }
 
         // Sort STARS primarily by volume to show the best of the best

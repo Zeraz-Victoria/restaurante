@@ -132,38 +132,53 @@ function OrderCard({
             </div>
 
             {/* Order Items List */}
-            <div className="p-2 flex-1 flex flex-col gap-2">
-                {order.items?.map((item: any) => (
-                    <div
-                        key={item.id}
-                        className={`p-4 rounded-xl border transition-colors ${item.status === 'cooking' ? "bg-[#2a2e39] border-white/5" : "bg-[#1f222a] border-white/5 opacity-80"
-                            }`}
-                    >
-                        <div className="flex gap-4">
-                            <div className="text-xl font-black bg-white/10 text-white w-8 h-8 flex items-center justify-center rounded-lg shrink-0">
-                                {item.quantity}
-                            </div>
-                            <div className="flex-1">
-                                <p className={`text-lg font-bold leading-tight ${order.status === 'cooking' ? 'text-white' : 'text-gray-300'}`}>
-                                    {item.name}
-                                </p>
-                                {/* High Contrast Modifiers */}
-                                {item.modifiers && item.modifiers.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {item.modifiers.map((mod: string, idx: number) => (
-                                            <span
-                                                key={idx}
-                                                className="bg-yellow-400/20 text-yellow-400 font-black text-xs uppercase px-2 py-1 rounded border border-yellow-400/30 tracking-wider"
-                                            >
-                                                {mod}
-                                            </span>
-                                        ))}
+            <div className="p-2 flex-1 flex flex-col gap-2 relative">
+                {!order.marchado_tiempo_2 && (
+                    <div className="absolute top-0 right-0 p-2 z-10 opacity-70">
+                        <span className="text-[10px] font-bold bg-orange-500/20 text-orange-400 px-2 py-1 rounded border border-orange-500/30 uppercase tracking-widest">
+                            Esperando Tiempos ▶
+                        </span>
+                    </div>
+                )}
+
+                {order.items
+                    ?.filter((item: any) => order.marchado_tiempo_2 || item.tiempo !== 2)
+                    .map((item: any) => (
+                        <div
+                            key={item.id}
+                            className={`p-4 rounded-xl border transition-colors ${item.status === 'cooking' ? "bg-[#2a2e39] border-white/5" : "bg-[#1f222a] border-white/5 opacity-80"
+                                }`}
+                        >
+                            <div className="flex gap-4">
+                                <div className="text-xl font-black bg-white/10 text-white w-8 h-8 flex items-center justify-center rounded-lg shrink-0">
+                                    {item.quantity}
+                                </div>
+                                <div className="flex-1">
+                                    <p className={`text-lg font-bold leading-tight ${order.status === 'cooking' ? 'text-white' : 'text-gray-300'}`}>
+                                        {item.name}
+                                    </p>
+                                    {/* High Contrast Modifiers */}
+                                    {item.modifiers && item.modifiers.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {item.modifiers.map((mod: string, idx: number) => (
+                                                <span
+                                                    key={idx}
+                                                    className="bg-yellow-400/20 text-yellow-400 font-black text-xs uppercase px-2 py-1 rounded border border-yellow-400/30 tracking-wider"
+                                                >
+                                                    {mod}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="mt-1 flex items-center gap-2">
+                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${item.tiempo === 2 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
+                                            {item.tiempo === 2 ? 'Tiempo 2: Fuerte' : 'Tiempo 1: Entrada/General'}
+                                        </span>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
             </div>
 
             {/* Action Buttons (Large Touch Targets) */}

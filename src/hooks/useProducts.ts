@@ -20,6 +20,7 @@ export interface Product {
     isPopular?: boolean;
     options?: any;
     extras?: any;
+    ingredients?: { name: string; quantity: number; unit: string; }[];
 }
 
 export function useProducts() {

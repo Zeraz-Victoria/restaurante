@@ -72,7 +72,7 @@ export default function WaiterPanel() {
     // Supabase Real-time Hooks (sin mocks — datos reales)
     const { tables, updateTableStatus } = useTables();
     const { notifications, resolveNotification } = useNotifications();
-    const { orders, clearTableOrders } = useOrders();
+    const { orders, clearTableOrders, markTiempo2 } = useOrders();
 
     const unreadCount = notifications.filter(n => !n.leido).length;
     // Sort notifications so unread are first
@@ -292,13 +292,24 @@ export default function WaiterPanel() {
                                     .map((orden, idx) => (
                                         <div key={orden.id} className="bg-[#1f222a] rounded-xl p-4 border border-white/5">
                                             <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
-                                                <span className="font-bold text-sm text-gray-300">Tanda {idx + 1}</span>
-                                                <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${orden.estado === 'listo' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                                    orden.estado === 'cocinando' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                                        'bg-gray-800 text-gray-400 border border-gray-700'
-                                                    }`}>
-                                                    {orden.estado}
-                                                </span>
+                                                <div className="flex gap-3 items-center">
+                                                    <span className="font-bold text-sm text-gray-300">Tanda {idx + 1}</span>
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${orden.estado === 'listo' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                                        orden.estado === 'cocinando' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                                            'bg-gray-800 text-gray-400 border border-gray-700'
+                                                        }`}>
+                                                        {orden.estado}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => markTiempo2(orden.id)}
+                                                    disabled={orden.marchado_tiempo_2}
+                                                    className={`px-3 py-1 font-bold text-[10px] rounded uppercase tracking-wider transition-all ${orden.marchado_tiempo_2
+                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/30 cursor-not-allowed opacity-60'
+                                                        : 'bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500 hover:text-white'}`}
+                                                >
+                                                    {orden.marchado_tiempo_2 ? 'Tiempos en Marcha ✓' : 'Marchar Tiempos ▶'}
+                                                </button>
                                             </div>
                                             <div className="space-y-3">
                                                 {orden.items?.map((item: any, i: number) => (

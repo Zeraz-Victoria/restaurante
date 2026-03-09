@@ -9,6 +9,7 @@ export interface Order {
     estado: OrderStatus;
     items: string; // JSON
     total: number;
+    marchado_tiempo_2?: boolean;
     created_at: string;
 }
 
@@ -78,7 +79,7 @@ export function useOrders(initialMockOrders: any[] = []) {
     const insertOrder = async (orderData: any) => {
         const { data, error } = await supabase
             .from('ordenes')
-            .insert([orderData])
+            .insert([{ ...orderData, marchado_tiempo_2: false }])
             .select();
 
         if (error) {
@@ -89,5 +90,16 @@ export function useOrders(initialMockOrders: any[] = []) {
         return data;
     };
 
-    return { orders, updateOrderStatus, insertOrder, clearTableOrders };
+    const markTiempo2 = async (orderId: string) => {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, marchado_tiempo_2: true } : o));
+
+        const { error } = await supabase
+            .from('ordenes')
+            .update({ marchado_tiempo_2: true })
+            .eq('id', orderId);
+
+        if (error) console.error("Error updating marchado_tiempo_2:", error);
+    };
+
+    return { orders, updateOrderStatus, insertOrder, clearTableOrders, markTiempo2 };
 }
