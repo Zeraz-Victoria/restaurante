@@ -211,6 +211,18 @@ export default function ClientMobileApp() {
             return next;
         });
     }
+
+    // Auto-add "Momento de Entrega" for Drinks
+    const isDrink = categorias.find(c => c.id === product.category_id)?.name.toLowerCase().includes('bebida');
+    if (isDrink) {
+        setTempOptions(prev => ({ ...prev, 'Momento de Entrega': 'Lo antes posible' }));
+    } else {
+        setTempOptions(prev => {
+            const next = {...prev};
+            delete next['Momento de Entrega'];
+            return next;
+        });
+    }
   };
 
   const addToCart = () => {
@@ -823,6 +835,30 @@ export default function ClientMobileApp() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Special Built-in Option: Drink Delivery Time */}
+                  {categorias.find(c => c.id === selectedProduct.category_id)?.name.toLowerCase().includes('bebida') && (
+                    <div className="mt-6">
+                      <h4 className="font-bold mb-3 text-base text-gray-900 flex justify-between items-center">
+                        Momento de Entrega <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">Requerido</span>
+                      </h4>
+                      <div className="flex flex-col gap-2">
+                        {['Lo antes posible', 'Junto con la comida'].map((choice: string) => (
+                          <label key={choice} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
+                            <input
+                              type="radio"
+                              name="momento_entrega"
+                              value={choice}
+                              checked={tempOptions['Momento de Entrega'] === choice}
+                              onChange={() => setTempOptions({ ...tempOptions, 'Momento de Entrega': choice })}
+                              className="w-5 h-5 accent-black focus:ring-black"
+                            />
+                            <span className="font-bold text-gray-700">{choice}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Extras (Checkbox Logic - Upselling) */}
                   {selectedProduct.extras && selectedProduct.extras.length > 0 && (
