@@ -818,18 +818,22 @@ export default function ClientMobileApp() {
                       <h4 className="font-bold mb-3 text-base text-gray-900 flex justify-between items-center">
                         {opt.name} <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">Requerido</span>
                       </h4>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {opt.choices.map((choice: string) => (
-                          <label key={choice} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
+                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[100px] text-center ${
+                            tempOptions[opt.name] === choice 
+                            ? 'bg-black text-white border-black shadow-md' 
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                          }`}>
                             <input
                               type="radio"
                               name={opt.name}
                               value={choice}
                               checked={tempOptions[opt.name] === choice}
                               onChange={() => setTempOptions({ ...tempOptions, [opt.name]: choice })}
-                              className="w-5 h-5 accent-black focus:ring-black"
+                              className="hidden"
                             />
-                            <span className="font-bold text-gray-700">{choice}</span>
+                            <span>{choice}</span>
                           </label>
                         ))}
                       </div>
@@ -842,18 +846,22 @@ export default function ClientMobileApp() {
                       <h4 className="font-bold mb-3 text-base text-gray-900 flex justify-between items-center">
                         Momento de Entrega <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">Requerido</span>
                       </h4>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {['Lo antes posible', 'Junto con la comida'].map((choice: string) => (
-                          <label key={choice} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
+                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[120px] text-center ${
+                            tempOptions['Momento de Entrega'] === choice 
+                            ? 'bg-black text-white border-black shadow-md' 
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                          }`}>
                             <input
                               type="radio"
                               name="momento_entrega"
                               value={choice}
                               checked={tempOptions['Momento de Entrega'] === choice}
                               onChange={() => setTempOptions({ ...tempOptions, 'Momento de Entrega': choice })}
-                              className="w-5 h-5 accent-black focus:ring-black"
+                              className="hidden"
                             />
-                            <span className="font-bold text-gray-700">{choice}</span>
+                            <span>{choice}</span>
                           </label>
                         ))}
                       </div>
@@ -866,33 +874,30 @@ export default function ClientMobileApp() {
                       <h4 className="font-bold mb-3 text-base text-gray-900">
                         Extras
                       </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {selectedProduct.extras.map((extra: any) => (
-                          <label key={extra.name} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
-                            <div className="flex flex-col">
-                                <span className="font-bold text-gray-800">{extra.name}</span>
-                                <span className="text-sm font-bold text-gray-500">${extra.price}</span>
-                            </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProduct.extras.map((extra: any) => {
+                          const isSelected = tempExtras.includes(extra.name);
+                          return (
+                          <label key={extra.name} className={`flex flex-col items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[110px] text-center relative overflow-hidden ${
+                             isSelected
+                            ? 'bg-black text-white border-black shadow-md' 
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                          }`}>
+                            <span className="font-bold">{extra.name}</span>
+                            <span className={isSelected ? "text-gray-300 text-xs mt-1" : "text-gray-500 text-xs mt-1"}>+${extra.price}</span>
+                            {isSelected && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
                             <button
                               type="button"
                               onClick={(e) => {
-                                  e.preventDefault(); // Prevent double triggering with the label
-                                  if (tempExtras.includes(extra.name)) {
-                                      setTempExtras(tempExtras.filter(x => x !== extra.name));
-                                  } else {
-                                      setTempExtras([...tempExtras, extra.name]);
-                                  }
+                                  e.preventDefault(); 
+                                  if (isSelected) setTempExtras(tempExtras.filter(x => x !== extra.name));
+                                  else setTempExtras([...tempExtras, extra.name]);
                               }}
-                              className="p-1"
+                              className="hidden"
                             >
-                                {tempExtras.includes(extra.name) ? (
-                                    <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>
-                                ) : (
-                                    <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-400"><Plus className="w-4 h-4" /></div>
-                                )}
                             </button>
                           </label>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   )}
