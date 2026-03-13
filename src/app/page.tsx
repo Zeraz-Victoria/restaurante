@@ -42,7 +42,7 @@ export default function ClientMobileApp() {
   const activeTables = tables.filter((t: any) => t.estado !== 'libre');
   const [activeTab, setActiveTab] = useState('menu'); // menu, cart, tracking
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("Populares");
+  const [activeCategory, setActiveCategory] = useState<string>("virtual_populares");
 
   // Detailed Product Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -160,16 +160,9 @@ export default function ClientMobileApp() {
   }, [cart, activeOrders, hasHydrated, hasPreviousOrder]);
 
   // Set initial active category once categories are loaded
+  // No longer needed because we default to 'virtual_populares', but we keep empty array dep.
   useEffect(() => {
-    if (categorias.length > 0 && activeCategory === "Populares") {
-      const popularesCategory = categorias.find(cat => cat.name === "Populares");
-      if (popularesCategory) {
-        setActiveCategory(popularesCategory.id);
-      } else {
-        setActiveCategory(categorias[0].id); // Fallback to first category
-      }
-    }
-  }, [categorias, activeCategory]);
+  }, []);
 
   // Helpers
   const cartTotal = cart.reduce((total, item) => {
@@ -411,6 +404,30 @@ export default function ClientMobileApp() {
 
               {/* Categories (Horizontal Scroll) */}
               <div className="px-4 py-3 bg-white border-b border-gray-100 overflow-x-auto whitespace-nowrap hide-scrollbar flex gap-2 sticky top-[72px] z-10 shadow-sm">
+                {/* Virtual Category: Populares */}
+                <button
+                    onClick={() => setActiveCategory('virtual_populares')}
+                    className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_populares'
+                      ? "bg-black text-white scale-105"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                      }`}
+                >
+                    🔥 Populares
+                </button>
+                
+                {/* Virtual Category: Promos */}
+                {products.some(p => p.discount_price) && (
+                    <button
+                        onClick={() => setActiveCategory('virtual_promos')}
+                        className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_promos'
+                        ? "bg-black text-white scale-105"
+                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                        }`}
+                    >
+                        💎 Promos
+                    </button>
+                )}
+
                 {categorias.map(cat => (
                   <button
                     key={cat.id}
@@ -426,7 +443,7 @@ export default function ClientMobileApp() {
               </div>
 
               {/* Hero Carousel: Recomendaciones del Chef */}
-              {products.filter(p => p.is_recommended).length > 0 && !searchQuery && (
+              {activeCategory === 'virtual_populares' && products.filter(p => p.is_recommended).length > 0 && !searchQuery && (
                 <div className="pt-6 pb-2 bg-white">
                   <h2 className="px-4 font-black text-xl mb-4 flex items-center gap-2">
                     <Star className="w-6 h-6 text-orange-500" fill="currentColor" /> Recomendaciones
@@ -475,7 +492,10 @@ export default function ClientMobileApp() {
               <div className="flex flex-col bg-white">
                 <div className="px-4 py-4 sticky top-[132px] z-10 bg-white/95 backdrop-blur-md border-b border-gray-100">
                     <h2 className="font-black text-2xl text-gray-900">
-                        {searchQuery ? 'Resultados' : categorias.find(c => c.id === activeCategory)?.name || 'Menú'}
+                        {searchQuery ? 'Resultados' : 
+                         activeCategory === 'virtual_populares' ? 'Populares y Recomendados' : 
+                         activeCategory === 'virtual_promos' ? 'Promociones Especiales' : 
+                         categorias.find(c => c.id === activeCategory)?.name || 'Menú'}
                     </h2>
                 </div>
                 
@@ -484,6 +504,15 @@ export default function ClientMobileApp() {
                     .filter((p) => {
                         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
                         if (searchQuery) return matchesSearch;
+                        
+                        if (activeCategory === 'virtual_populares') {
+                            return p.isPopular || p.is_recommended;
+                        }
+                        
+                        if (activeCategory === 'virtual_promos') {
+                            return !!p.discount_price;
+                        }
+
                         return p.category_id === activeCategory;
                     })
                     .map((product) => (
