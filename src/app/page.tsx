@@ -601,7 +601,7 @@ export default function ClientMobileApp() {
                     </div>
                   ))}
 
-                  <div className="pt-6">
+                  <div className="pt-6 pb-12 sm:pb-6">
                     <button
                       onClick={placeOrder}
                       disabled={isSubmitting}
@@ -875,7 +875,7 @@ export default function ClientMobileApp() {
               </div>
 
               {/* Add to Cart Actions */}
-              <div className="bg-white p-4 border-t border-gray-100 flex gap-4 items-center pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+              <div className="bg-white p-4 pb-10 sm:pb-4 border-t border-gray-100 flex gap-4 items-center shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
                 {/* Quantity Picker */}
                 <div className="flex items-center bg-gray-50 rounded-2xl p-1 shadow-inner">
                   <button
