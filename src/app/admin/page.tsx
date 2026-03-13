@@ -67,6 +67,9 @@ export default function AdminDashboard() {
         const cost = Number(formData.get('cost'));
         const category_id = formData.get('category_id') as string;
         const description = formData.get('description') as string;
+        const is_recommended = formData.get('is_recommended') === 'on';
+        const discount_price_raw = formData.get('discount_price') as string;
+        const discount_price = discount_price_raw ? Number(discount_price_raw) : undefined;
         let image_url = currentImageUrl;
 
         // Extract ingredients dynamically from the DOM (or state, but DOM is easier here with the current formData pattern)
@@ -90,9 +93,9 @@ export default function AdminDashboard() {
 
         try {
             if (editingProduct) {
-                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url, ingredients: ingredientsList });
+                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url, ingredients: ingredientsList, is_recommended, discount_price });
             } else {
-                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList });
+                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList, is_recommended, discount_price });
             }
             setIsMenuModalOpen(false);
         } catch (error) {
@@ -834,6 +837,16 @@ export default function AdminDashboard() {
                                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                                         ))}
                                     </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex items-center gap-3 bg-black/50 border border-white/10 rounded-xl px-4 py-3">
+                                        <input type="checkbox" name="is_recommended" defaultChecked={editingProduct?.is_recommended || false} id="is_recommended" className="w-5 h-5 accent-orange-500" />
+                                        <label htmlFor="is_recommended" className="text-sm font-bold text-gray-400 cursor-pointer">Recomendación del Chef</label>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-400 mb-1">Precio Promoción ($) (Opcional)</label>
+                                        <input type="number" name="discount_price" defaultValue={editingProduct?.discount_price || ''} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="Ej. 99" />
+                                    </div>
                                 </div>
 
                                 {/* ---------------- INGREDIENTS RECIPE BUILDER ---------------- */}

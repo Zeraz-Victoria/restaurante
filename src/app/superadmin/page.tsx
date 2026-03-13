@@ -173,7 +173,7 @@ export default function SuperAdminDashboard() {
                                 </table>
                                 {TENANTS.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
                                     <div className="p-8 text-center text-[#6b7280]">
-                                        No se encontraron restaurantes con "{searchQuery}"
+                                        No se encontraron restaurantes con &quot;{searchQuery}&quot;
                                     </div>
                                 )}
                             </div>

@@ -18,6 +18,8 @@ export interface Product {
     status: string;
     is_spicy: boolean;
     isPopular?: boolean;
+    is_recommended?: boolean;
+    discount_price?: number;
     options?: any;
     extras?: any;
     ingredients?: { name: string; quantity: number; unit: string; }[];

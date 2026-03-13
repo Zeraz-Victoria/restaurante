@@ -173,7 +173,7 @@ export default function ClientMobileApp() {
 
   // Helpers
   const cartTotal = cart.reduce((total, item) => {
-    let base = item.product.price;
+    let base = item.product.discount_price ? item.product.discount_price : item.product.price;
     item.selectedExtras.forEach((extName: string) => {
       const extPrice = item.product.extras?.find((e: any) => e.name === extName)?.price || 0;
       base += extPrice;
@@ -377,28 +377,28 @@ export default function ClientMobileApp() {
           {activeTab === 'menu' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
               {/* Search */}
-              <div className="p-4 bg-white sticky top-0 z-10">
+              <div className="p-4 bg-white sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-gray-100">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
                     placeholder="¿Qué se te antoja hoy?"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-100 text-gray-900 rounded-2xl py-3 pl-10 pr-4 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 transition-shadow"
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-2xl py-3 pl-12 pr-4 font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
                   />
                 </div>
               </div>
 
               {/* Categories (Horizontal Scroll) */}
-              <div className="px-4 py-2 bg-white border-b overflow-x-auto whitespace-nowrap hide-scrollbar flex gap-2">
+              <div className="px-4 py-3 bg-white border-b border-gray-100 overflow-x-auto whitespace-nowrap hide-scrollbar flex gap-2 sticky top-[72px] z-10 shadow-sm">
                 {categorias.map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`px-5 py-2 rounded-full font-bold text-sm transition-colors ${activeCategory === cat.id
-                      ? "bg-gray-900 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === cat.id
+                      ? "bg-black text-white scale-105"
+                      : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                       }`}
                   >
                     {cat.name}
@@ -406,46 +406,108 @@ export default function ClientMobileApp() {
                 ))}
               </div>
 
+              {/* Hero Carousel: Recomendaciones del Chef */}
+              {products.filter(p => p.is_recommended).length > 0 && !searchQuery && (
+                <div className="pt-6 pb-2 bg-white">
+                  <h2 className="px-4 font-black text-xl mb-4 flex items-center gap-2">
+                    <Star className="w-6 h-6 text-orange-500" fill="currentColor" /> Recomendaciones
+                  </h2>
+                  <div className="flex gap-4 overflow-x-auto px-4 pb-6 snap-x snap-mandatory hide-scrollbar">
+                    {products.filter(p => p.is_recommended).map(product => (
+                      <div
+                        key={`rec-${product.id}`}
+                        onClick={() => openProductModal(product)}
+                        className="min-w-[280px] max-w-[300px] bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.08)] snap-center cursor-pointer active:scale-95 transition-transform border border-black/5"
+                      >
+                        <div className="h-44 bg-gray-100 relative">
+                          {product.image_url ? (
+                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                             <Utensils className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          )}
+                          <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[10px] uppercase font-black tracking-widest px-3 py-1.5 rounded-xl border border-white/10">Chef&apos;s Pick</div>
+                        </div>
+                        <div className="p-5">
+                          <h3 className="font-black text-gray-900 text-xl truncate mb-1">{product.name}</h3>
+                          <p className="text-gray-500 text-sm truncate mb-3">{product.description}</p>
+                          <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                  {product.discount_price ? (
+                                      <>
+                                          <span className="font-black text-orange-600 text-xl">${product.discount_price}</span>
+                                          <span className="text-gray-400 text-sm line-through font-bold">${product.price}</span>
+                                      </>
+                                  ) : (
+                                      <span className="font-black text-gray-900 text-xl">${product.price}</span>
+                                  )}
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-900">
+                                <Plus className="w-5 h-5" />
+                              </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Product List */}
-              <div className="p-4 flex flex-col gap-4">
-                {products
-                  .filter((p) => {
-                    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
-                    if (searchQuery) return matchesSearch;
-                    return p.category_id === activeCategory;
-                  })
-                  .map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => openProductModal(product)}
-                      className="bg-white rounded-3xl p-3 flex gap-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] active:scale-[0.98] transition-all cursor-pointer border border-transparent hover:border-orange-100"
-                    >
-                      <div className="w-28 h-28 relative rounded-2xl overflow-hidden shrink-0 bg-gray-100">
-                        {/* Replaced Next Image with standard img because we use external unrestrained URLs */}
-                        {product.image_url ?
-                          <img src={product.image_url} alt={product.name} className="object-cover w-full h-full" />
-                          : <Utensils className="w-12 h-12 text-gray-600 opacity-50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                        }
-                        {product.isPopular && (
-                          <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-bl-xl z-10 uppercase tracking-widest flex items-center gap-1">
-                            <Flame className="w-3 h-3" /> Top
-                          </div>
-                        )}
-                      </div>
-                      <div className="py-1 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3 className="font-bold text-gray-900 leading-tight pr-4">{product.name}</h3>
-                          <p className="text-sm text-gray-500 line-clamp-2 mt-1 leading-snug">{product.description}</p>
+              <div className="flex flex-col bg-white">
+                <div className="px-4 py-4 sticky top-[132px] z-10 bg-white/95 backdrop-blur-md border-b border-gray-100">
+                    <h2 className="font-black text-2xl text-gray-900">
+                        {searchQuery ? 'Resultados' : categorias.find(c => c.id === activeCategory)?.name || 'Menú'}
+                    </h2>
+                </div>
+                
+                <div className="flex flex-col px-4 pt-2 pb-6">
+                    {products
+                    .filter((p) => {
+                        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                        if (searchQuery) return matchesSearch;
+                        return p.category_id === activeCategory;
+                    })
+                    .map((product) => (
+                        <div
+                        key={product.id}
+                        onClick={() => openProductModal(product)}
+                        className="bg-white group cursor-pointer active:bg-gray-50 transition-colors py-5 border-b border-gray-100 last:border-0"
+                        >
+                        <div className="flex gap-4 justify-between h-[120px]">
+                            <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-lg leading-tight truncate">{product.name}</h3>
+                                    <p className="text-sm text-gray-500 line-clamp-2 mt-1 pr-2 leading-relaxed">{product.description}</p>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    {product.discount_price ? (
+                                        <>
+                                            <span className="font-black text-orange-600 text-lg">${product.discount_price}</span>
+                                            <span className="text-gray-400 text-xs line-through font-bold">${product.price}</span>
+                                            <span className="bg-orange-100 text-orange-600 text-[10px] uppercase font-black px-2 py-0.5 rounded-md">Promo</span>
+                                        </>
+                                    ) : (
+                                        <span className="font-black text-gray-900 text-lg">${product.price}</span>
+                                    )}
+                                    {product.isPopular && !product.discount_price && (
+                                        <span className="bg-amber-100 text-amber-700 text-[10px] uppercase font-black px-2 py-0.5 rounded-md flex items-center gap-1"><Flame className="w-3 h-3"/> Top</span>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="w-[120px] h-full relative rounded-2xl overflow-hidden shrink-0 bg-gray-50 shadow-sm border border-black/[0.03]">
+                                {product.image_url ?
+                                    <img src={product.image_url} alt={product.name} className="object-cover w-full h-full scale-100 group-hover:scale-105 transition-transform duration-500 ease-out" />
+                                    : <Utensils className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                }
+                                <div className="absolute bottom-2 right-2 bg-white rounded-full p-1.5 shadow-md">
+                                    <Plus className="w-4 h-4 text-black" />
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-center mt-2">
-                          <span className="font-black text-lg text-gray-900">${product.price}</span>
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <Plus className="w-5 h-5 text-gray-600" />
-                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
               </div>
             </div>
           )}
@@ -482,7 +544,7 @@ export default function ClientMobileApp() {
                           {item.selectedExtras.map(ext => (
                             <p key={ext} className="text-orange-600">• + {ext}</p>
                           ))}
-                          {item.note && <p className="italic mt-1 text-gray-400">"{item.note}"</p>}
+                          {item.note && <p className="italic mt-1 text-gray-400">&quot;{item.note}&quot;</p>}
                         </div>
                       </div>
                       <button onClick={() => removeFromCart(item.id)} className="text-red-400 self-start p-1 hover:bg-red-50 rounded">
@@ -633,7 +695,18 @@ export default function ClientMobileApp() {
               <div className="p-6 overflow-y-auto flex-1 bg-[#111216] text-white">
                 <h2 className="text-3xl font-black leading-tight">{selectedProduct.name}</h2>
                 <p className="text-gray-400 mt-2 leading-relaxed">{selectedProduct.description}</p>
-                <p className="text-2xl font-black mt-4 text-orange-500">${selectedProduct.price}</p>
+                
+                <div className="flex items-center gap-3 mt-4">
+                  {selectedProduct.discount_price ? (
+                    <>
+                      <p className="text-3xl font-black text-orange-500">${selectedProduct.discount_price}</p>
+                      <p className="text-xl font-bold text-gray-500 line-through">${selectedProduct.price}</p>
+                      <span className="bg-orange-500/20 text-orange-400 font-bold px-2 py-1 rounded-lg text-sm uppercase mb-1">Promo</span>
+                    </>
+                  ) : (
+                    <p className="text-3xl font-black text-orange-500">${selectedProduct.price}</p>
+                  )}
+                </div>
 
                 <div className="space-y-6 mt-8">
                   {/* Options (Radio Logic) */}
@@ -720,7 +793,7 @@ export default function ClientMobileApp() {
                   onClick={addToCart}
                   className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_20px_rgba(234,88,12,0.3)] active:scale-[0.98] transition-all"
                 >
-                  Agregar ${selectedProduct.price * tempQuantity}
+                  Agregar ${(selectedProduct.discount_price ? selectedProduct.discount_price : selectedProduct.price) * tempQuantity}
                 </button>
               </div>
             </div>
