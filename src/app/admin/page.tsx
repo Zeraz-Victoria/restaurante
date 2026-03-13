@@ -124,12 +124,9 @@ export default function AdminDashboard() {
             setIsMenuModalOpen(false);
         } catch (error: any) {
             console.error(error);
-            if (error?.message?.includes('column') || error?.code === '42703') {
-               alert('⚠️ El producto se guardó parcialmente. Para usar Tamaños, Extras o Promociones, necesitas actualizar tu Base de Datos en Supabase con el código SQL proporcionado en las instrucciones.');
-               setIsMenuModalOpen(false); // Close it anyway since the fallback likely succeeded
-            } else {
-               alert('Error guardando producto. Revisa la consola para más detalles.');
-            }
+            const errStr = error?.message || JSON.stringify(error);
+            alert(`🚨 Ups! Ha ocurrido un fallo en la base de datos de origen.\n\nError Supabase:\n${errStr}\n\nSi el error incluye "column does not exist", por favor asegúrate de haber ejecutado todo el código SQL en tu panel de Supabase. Si necesitas ayuda copia este error.`);
+            setIsMenuModalOpen(false); // allow them to continue
         }
     };
 
