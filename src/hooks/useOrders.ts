@@ -7,14 +7,14 @@ export interface Order {
     id: string;
     mesa_id: string;
     estado: OrderStatus;
-    items: string; // JSON
+    items: any[] | string; // JSON
     total: number;
     marchado_tiempo_2?: boolean;
     created_at: string;
 }
 
-export function useOrders(initialMockOrders: any[] = []) {
-    const [orders, setOrders] = useState<any[]>(initialMockOrders);
+export function useOrders(initialMockOrders: Order[] = []) {
+    const [orders, setOrders] = useState<Order[]>(initialMockOrders);
 
     useEffect(() => {
         // Fetch initial active orders
@@ -38,9 +38,9 @@ export function useOrders(initialMockOrders: any[] = []) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, payload => {
                 console.log('Realtime change in ordenes:', payload);
                 if (payload.eventType === 'INSERT') {
-                    setOrders(prev => [...prev, payload.new as any]);
+                    setOrders(prev => [...prev, payload.new as Order]);
                 } else if (payload.eventType === 'UPDATE') {
-                    setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
+                    setOrders(prev => prev.map(o => o.id === payload.new.id ? (payload.new as Order) : o));
                 } else if (payload.eventType === 'DELETE') {
                     setOrders(prev => prev.filter(o => o.id !== payload.old.id));
                 }
@@ -77,7 +77,7 @@ export function useOrders(initialMockOrders: any[] = []) {
         if (error) console.error("Error clearing table orders:", error);
     };
 
-    const insertOrder = async (orderData: any) => {
+    const insertOrder = async (orderData: Partial<Order>) => {
         const { data, error } = await supabase
             .from('ordenes')
             .insert([{ ...orderData }])
@@ -86,7 +86,7 @@ export function useOrders(initialMockOrders: any[] = []) {
         if (error) {
             console.error("Error insertando orden:", error);
             // Fallback para mock
-            setOrders(prev => [...prev, { id: Math.random().toString(), ...orderData }]);
+            setOrders(prev => [...prev, { id: Math.random().toString(), ...orderData } as Order]);
         }
         return data;
     };
@@ -101,11 +101,11 @@ export function useOrders(initialMockOrders: any[] = []) {
             // We map over items, but instead of altering them, we just append a metadata flag
             // or we can just send a flag inside the first item. Actually, let's just update all 
             // items with tiempo 2 to have `marchado: true`
-            let updatedItems = [];
+            let updatedItems: unknown[] = [];
             try {
-                let itemsArr = typeof orderToUpdate.items === 'string' ? JSON.parse(orderToUpdate.items) : orderToUpdate.items;
-                updatedItems = itemsArr.map((item: any) => item.tiempo === 2 ? { ...item, marchado: true } : item);
-            } catch (e) {
+                const itemsArr = typeof orderToUpdate.items === 'string' ? JSON.parse(orderToUpdate.items) : orderToUpdate.items;
+                updatedItems = itemsArr.map((item: { tiempo?: number }) => item.tiempo === 2 ? { ...item, marchado: true } : item);
+            } catch {
                 console.error("Failed to parse/update items JSON");
                 return;
             }

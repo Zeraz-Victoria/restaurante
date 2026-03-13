@@ -20,8 +20,9 @@ export interface Product {
     isPopular?: boolean;
     is_recommended?: boolean;
     discount_price?: number;
-    options?: any;
-    extras?: any;
+    sizes?: { name: string; price: number }[];
+    options?: { name: string; choices: string[] }[];
+    extras?: { name: string; price: number }[];
     ingredients?: { name: string; quantity: number; unit: string; }[];
 }
 

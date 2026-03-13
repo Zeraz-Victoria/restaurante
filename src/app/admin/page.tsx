@@ -59,6 +59,10 @@ export default function AdminDashboard() {
     const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState<any>(null);
 
+    // Dynamic states for Sizes and Extras
+    const [tempSizes, setTempSizes] = useState<{ id: number; name: string; price: number }[]>([]);
+    const [tempExtras, setTempExtras] = useState<{ id: number; name: string; price: number }[]>([]);
+
     const handleSaveProduct = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -88,14 +92,34 @@ export default function AdminDashboard() {
             }
         }
 
+        // Extract sizes dynamically
+        const sizesList: any[] = [];
+        const sizeNames = formData.getAll('size_name');
+        const sizePrices = formData.getAll('size_price');
+        for (let i = 0; i < sizeNames.length; i++) {
+            if (sizeNames[i]) {
+                sizesList.push({ name: sizeNames[i] as string, price: Number(sizePrices[i]) || 0 });
+            }
+        }
+
+        // Extract extras dynamically
+        const extrasList: any[] = [];
+        const extraNames = formData.getAll('extra_name');
+        const extraPrices = formData.getAll('extra_price');
+        for (let i = 0; i < extraNames.length; i++) {
+            if (extraNames[i]) {
+                extrasList.push({ name: extraNames[i] as string, price: Number(extraPrices[i]) || 0 });
+            }
+        }
+
         // Ensure we don't save empty strings if user didn't provide image
         if (!image_url || image_url.trim() === '') image_url = '';
 
         try {
             if (editingProduct) {
-                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url, ingredients: ingredientsList, is_recommended, discount_price });
+                await updateProduct(editingProduct.id, { name, price, cost, category_id, description, image_url, ingredients: ingredientsList, is_recommended, discount_price, sizes: sizesList, extras: extrasList });
             } else {
-                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList, is_recommended, discount_price });
+                await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList, is_recommended, discount_price, sizes: sizesList, extras: extrasList });
             }
             setIsMenuModalOpen(false);
         } catch (error) {
@@ -484,7 +508,14 @@ export default function AdminDashboard() {
                                     <Plus className="w-5 h-5" /> Categoría
                                 </button>
                                 <button
-                                    onClick={() => { setEditingProduct(null); setCurrentImageUrl(''); setTempIngredients([]); setIsMenuModalOpen(true); }}
+                                    onClick={() => {
+                                        setEditingProduct(null);
+                                        setCurrentImageUrl('');
+                                        setTempIngredients([]);
+                                        setTempSizes([]);
+                                        setTempExtras([]);
+                                        setIsMenuModalOpen(true);
+                                    }}
                                     className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-colors"
                                 >
                                     <Plus className="w-5 h-5" /> Platillo
@@ -533,7 +564,14 @@ export default function AdminDashboard() {
                                             <td className="p-4 font-black text-green-400">${prod.price}</td>
                                             <td className="p-4 font-bold text-gray-500">${prod.cost}</td>
                                             <td className="p-4 flex gap-3 justify-end items-center h-[72px]">
-                                                <button onClick={() => { setEditingProduct(prod); setCurrentImageUrl(prod.image_url || ''); setTempIngredients(prod.ingredients || []); setIsMenuModalOpen(true); }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={() => {
+                                                    setEditingProduct(prod);
+                                                    setCurrentImageUrl(prod.image_url || '');
+                                                    setTempIngredients(prod.ingredients || []);
+                                                    setTempSizes(prod.sizes?.map((s, i) => ({ id: i, ...s })) || []);
+                                                    setTempExtras(prod.extras?.map((e, i) => ({ id: i, ...e })) || []);
+                                                    setIsMenuModalOpen(true);
+                                                }} className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20"><Edit2 className="w-4 h-4" /></button>
                                                 <button onClick={() => handleDeleteProduct(prod.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20"><Trash2 className="w-4 h-4" /></button>
                                             </td>
                                         </tr>
@@ -846,6 +884,58 @@ export default function AdminDashboard() {
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-1">Precio Promoción ($) (Opcional)</label>
                                         <input type="number" name="discount_price" defaultValue={editingProduct?.discount_price || ''} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors" placeholder="Ej. 99" />
+                                    </div>
+                                </div>
+
+                                {/* ---------------- SIZES BUILDER ---------------- */}
+                                <div className="border-t border-white/10 pt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h4 className="font-black text-lg text-white">Tamaños / Porciones</h4>
+                                            <p className="text-xs text-gray-400">Si dejas esto vacío, se cobrará el Precio Base. Si agregas tamaños (ej. Chico, Grande), el cliente deberá elegir uno.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTempSizes([...tempSizes, { id: Date.now(), name: '', price: 0 }])}
+                                            className="bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg text-xs font-bold border border-orange-500/30 transition-colors flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Añadir Tamaño
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-hide">
+                                        {tempSizes.map((sz, idx) => (
+                                            <div key={sz.id} className="flex gap-2 items-center bg-white/[0.02] p-2 rounded-xl border border-white/5">
+                                                <input required name="size_name" defaultValue={sz.name} placeholder="Ej. Mediano" className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500" />
+                                                <input required type="number" step="0.01" name="size_price" defaultValue={sz.price} placeholder="Precio $" className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500" />
+                                                <button type="button" onClick={() => setTempSizes(tempSizes.filter((_, i) => i !== idx))} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* ---------------- EXTRAS BUILDER ---------------- */}
+                                <div className="border-t border-white/10 pt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h4 className="font-black text-lg text-white">Extras Modificadores</h4>
+                                            <p className="text-xs text-gray-400">Complementos opcionales que el cliente puede agregar por un costo extra.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTempExtras([...tempExtras, { id: Date.now(), name: '', price: 0 }])}
+                                            className="bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-bold border border-blue-500/30 transition-colors flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Añadir Extra
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scrollbar-hide">
+                                        {tempExtras.map((ext, idx) => (
+                                            <div key={ext.id} className="flex gap-2 items-center bg-white/[0.02] p-2 rounded-xl border border-white/5">
+                                                <input required name="extra_name" defaultValue={ext.name} placeholder="Ej. Queso Extra" className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                                                <input required type="number" step="0.01" name="extra_price" defaultValue={ext.price} placeholder="Precio $" className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                                                <button type="button" onClick={() => setTempExtras(tempExtras.filter((_, i) => i !== idx))} className="p-2 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 

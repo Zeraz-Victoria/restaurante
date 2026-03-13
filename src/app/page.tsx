@@ -174,6 +174,13 @@ export default function ClientMobileApp() {
   // Helpers
   const cartTotal = cart.reduce((total, item) => {
     let base = item.product.discount_price ? item.product.discount_price : item.product.price;
+    
+    // Override base price if a size was selected
+    if (item.selectedOptions._size && item.product.sizes) {
+      const sizeObj = item.product.sizes.find(s => s.name === item.selectedOptions._size);
+      if (sizeObj) base = sizeObj.price;
+    }
+
     item.selectedExtras.forEach((extName: string) => {
       const extPrice = item.product.extras?.find((e: any) => e.name === extName)?.price || 0;
       base += extPrice;
@@ -198,6 +205,18 @@ export default function ClientMobileApp() {
         if (opt.choices.length > 0) initialOpts[opt.name] = opt.choices[0];
       });
       setTempOptions(initialOpts);
+    }
+
+    // Auto-select first size if available, or just set it based on the first item
+    if (product.sizes && product.sizes.length > 0) {
+        setTempOptions(prev => ({ ...prev, _size: product.sizes![0].name }));
+    } else {
+        // If no sizes, we don't need a _size option
+        setTempOptions(prev => {
+            const next = {...prev};
+            delete next._size;
+            return next;
+        });
     }
   };
 
@@ -246,7 +265,7 @@ export default function ClientMobileApp() {
           status: 'pending'
         })),
         total: cartTotal,
-        estado: 'pendiente',
+        estado: 'pendiente' as const,
         is_addition: hasPreviousOrder,
       };
 
@@ -665,68 +684,111 @@ export default function ClientMobileApp() {
           </button>
         </nav>
 
-        {/* --- PRODUCT DETAIL MODAL (Bottom Sheet Style) --- */}
+        {/* --- PRODUCT DETAIL MODAL (Wolt/Uber Style) --- */}
         {selectedProduct && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end justify-center animate-in fade-in duration-300">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end justify-center animate-in fade-in duration-300">
             {/* Backdrop */}
             <div className="absolute inset-0" onClick={() => setSelectedProduct(null)}></div>
 
             {/* Sheet Content */}
-            <div className="bg-[#111216] w-full rounded-t-3xl h-[90vh] overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border border-white/5 relative z-10 slide-in-from-bottom-20">
+            <div className="bg-[#f9fafb] w-full rounded-t-[2.5rem] h-[92vh] overflow-hidden flex flex-col shadow-[0_-10px_50px_rgba(0,0,0,0.15)] relative z-10 slide-in-from-bottom-full mt-auto mb-0 duration-500 ease-out">
+              
+              {/* Floating Close Button */}
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-4 left-4 bg-white/80 backdrop-blur-md rounded-full p-2.5 text-gray-900 shadow-sm z-20 hover:bg-white active:scale-95 transition-all"
+              >
+                <ChevronRight className="w-6 h-6 rotate-180" />
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('cart')}
+                className="absolute top-4 right-4 bg-white/80 backdrop-blur-md rounded-full p-2.5 text-gray-900 shadow-sm z-20 hover:bg-white active:scale-95 transition-all"
+              >
+                <ShoppingCart className="w-6 h-6" />
+                {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full">{cartCount}</span>}
+              </button>
 
-              <div className="relative h-64 w-full bg-gray-900 flex-shrink-0 flex items-center justify-center rounded-t-3xl overflow-hidden">
+              <div className="relative h-[35vh] w-full bg-gray-200 flex-shrink-0 flex items-center justify-center">
                 {selectedProduct.image_url ?
                   <img
                     src={selectedProduct.image_url}
                     alt={selectedProduct.name}
                     className="w-full h-full object-cover"
                   />
-                  : <Utensils className="w-16 h-16 text-gray-600 opacity-50" />
+                  : <Utensils className="w-16 h-16 text-gray-400 opacity-50" />
                 }
-                <button
-                  onClick={() => setSelectedProduct(null)}
-                  className="absolute top-4 right-4 bg-black/50 backdrop-blur-md rounded-full p-2 text-white hover:bg-black"
-                >
-                  <ChevronRight className="w-6 h-6 rotate-90" />
-                </button>
+                {/* Gradient overlay for smooth transition */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#f9fafb] via-transparent to-transparent opacity-100"></div>
               </div>
 
               {/* Scrollable details */}
-              <div className="p-6 overflow-y-auto flex-1 bg-[#111216] text-white">
-                <h2 className="text-3xl font-black leading-tight">{selectedProduct.name}</h2>
-                <p className="text-gray-400 mt-2 leading-relaxed">{selectedProduct.description}</p>
+              <div className="px-6 pb-6 overflow-y-auto flex-1 bg-[#f9fafb] text-gray-900 relative -mt-10 rounded-t-[2.5rem] z-10">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
                 
-                <div className="flex items-center gap-3 mt-4">
-                  {selectedProduct.discount_price ? (
-                    <>
-                      <p className="text-3xl font-black text-orange-500">${selectedProduct.discount_price}</p>
-                      <p className="text-xl font-bold text-gray-500 line-through">${selectedProduct.price}</p>
-                      <span className="bg-orange-500/20 text-orange-400 font-bold px-2 py-1 rounded-lg text-sm uppercase mb-1">Promo</span>
-                    </>
+                <h2 className="text-3xl font-black leading-tight text-center">{selectedProduct.name}</h2>
+                <p className="text-gray-500 mt-3 leading-relaxed text-center max-w-sm mx-auto">{selectedProduct.description}</p>
+                
+                {/* Dynamically update the main price based on selected size or base price */}
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  {selectedProduct.sizes && selectedProduct.sizes.length > 0 ? (
+                    (() => {
+                        const selectedSizeObj = selectedProduct.sizes?.find(s => s.name === tempOptions._size) || selectedProduct.sizes[0];
+                        return <p className="text-3xl font-black text-gray-900">${selectedSizeObj.price}</p>;
+                    })()
                   ) : (
-                    <p className="text-3xl font-black text-orange-500">${selectedProduct.price}</p>
+                    selectedProduct.discount_price ? (
+                        <>
+                        <p className="text-3xl font-black text-gray-900">${selectedProduct.discount_price}</p>
+                        <p className="text-xl font-bold text-gray-400 line-through">${selectedProduct.price}</p>
+                        </>
+                    ) : (
+                        <p className="text-3xl font-black text-gray-900">${selectedProduct.price}</p>
+                    )
                   )}
                 </div>
 
                 <div className="space-y-6 mt-8">
+                  {/* Sizes (Porciones) */}
+                  {selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-bold mb-4 text-base text-gray-900">Tamaño</h4>
+                      <div className="flex flex-wrap gap-3">
+                        {selectedProduct.sizes.map((size) => (
+                           <button
+                             key={size.name}
+                             onClick={() => setTempOptions({ ...tempOptions, _size: size.name })}
+                             className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex flex-col items-center justify-center min-w-[80px] ${
+                               tempOptions._size === size.name 
+                               ? 'bg-black text-white scale-105 border-2 border-black' 
+                               : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                             }`}
+                           >
+                              <span className="text-lg">{size.name}</span>
+                           </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Options (Radio Logic) */}
                   {selectedProduct.options?.map((opt: any) => (
-                    <div key={opt.name} className="bg-white/5 p-4 rounded-2xl border border-white/10 shadow-sm">
-                      <h4 className="font-bold mb-3 uppercase tracking-wider text-sm flex justify-between">
-                        {opt.name} <span className="text-orange-500 text-xs bg-orange-500/10 px-2 py-1 rounded">Requerido</span>
+                    <div key={opt.name} className="mt-6">
+                      <h4 className="font-bold mb-3 text-base text-gray-900 flex justify-between items-center">
+                        {opt.name} <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider">Requerido</span>
                       </h4>
                       <div className="flex flex-col gap-2">
                         {opt.choices.map((choice: string) => (
-                          <label key={choice} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-white/10 transition-colors">
+                          <label key={choice} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
                             <input
                               type="radio"
                               name={opt.name}
                               value={choice}
                               checked={tempOptions[opt.name] === choice}
                               onChange={() => setTempOptions({ ...tempOptions, [opt.name]: choice })}
-                              className="w-5 h-5 accent-orange-500"
+                              className="w-5 h-5 accent-black focus:ring-black"
                             />
-                            <span className="font-medium">{choice}</span>
+                            <span className="font-bold text-gray-700">{choice}</span>
                           </label>
                         ))}
                       </div>
@@ -735,26 +797,35 @@ export default function ClientMobileApp() {
 
                   {/* Extras (Checkbox Logic - Upselling) */}
                   {selectedProduct.extras && selectedProduct.extras.length > 0 && (
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 shadow-sm">
-                      <h4 className="font-bold mb-3 uppercase tracking-wider text-sm flex justify-between">
-                        Agrega Extras <span className="text-gray-500 text-xs">Opcional</span>
+                    <div className="mt-6">
+                      <h4 className="font-bold mb-3 text-base text-gray-900">
+                        Extras
                       </h4>
-                      <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {selectedProduct.extras.map((extra: any) => (
-                          <label key={extra.name} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 cursor-pointer hover:bg-white/10 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={tempExtras.includes(extra.name)}
-                              onChange={(e) => {
-                                if (e.target.checked) setTempExtras([...tempExtras, extra.name]);
-                                else setTempExtras(tempExtras.filter(x => x !== extra.name));
-                              }}
-                              className="w-5 h-5 accent-orange-500 rounded"
-                            />
-                            <div className="flex-1 flex justify-between items-center">
-                              <span className="font-medium">{extra.name}</span>
-                              <span className="text-sm font-bold text-gray-400">+${extra.price}</span>
+                          <label key={extra.name} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.02)] cursor-pointer hover:border-gray-200 transition-colors">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-gray-800">{extra.name}</span>
+                                <span className="text-sm font-bold text-gray-500">${extra.price}</span>
                             </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                  e.preventDefault(); // Prevent double triggering with the label
+                                  if (tempExtras.includes(extra.name)) {
+                                      setTempExtras(tempExtras.filter(x => x !== extra.name));
+                                  } else {
+                                      setTempExtras([...tempExtras, extra.name]);
+                                  }
+                              }}
+                              className="p-1"
+                            >
+                                {tempExtras.includes(extra.name) ? (
+                                    <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white"><CheckCircle2 className="w-4 h-4" /></div>
+                                ) : (
+                                    <div className="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-400"><Plus className="w-4 h-4" /></div>
+                                )}
+                            </button>
                           </label>
                         ))}
                       </div>
@@ -762,38 +833,53 @@ export default function ClientMobileApp() {
                   )}
 
                   {/* Special Instructions */}
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/10 shadow-sm">
-                    <h4 className="font-bold mb-3 uppercase tracking-wider text-sm">Instrucciones Especiales</h4>
+                  <div className="mt-6">
+                    <h4 className="font-bold mb-3 text-base text-gray-900">Comentarios</h4>
                     <textarea
                       placeholder="Ej. Sin cebolla, aderezo aparte..."
                       value={tempNote}
                       onChange={e => setTempNote(e.target.value)}
-                      className="w-full bg-black/50 rounded-xl p-3 border border-white/5 focus:outline-none focus:border-orange-500 resize-none h-24 placeholder:text-gray-600"
+                      className="w-full bg-white rounded-2xl p-4 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none h-24 placeholder:text-gray-400 shadow-sm"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Add to Cart Actions */}
-              <div className="bg-[#111216] p-4 border-t border-white/10 flex gap-4 items-center pb-safe">
+              <div className="bg-white p-4 border-t border-gray-100 flex gap-4 items-center pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
                 {/* Quantity Picker */}
-                <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/10">
+                <div className="flex items-center bg-gray-50 rounded-2xl p-1 shadow-inner">
                   <button
                     onClick={() => setTempQuantity(Math.max(1, tempQuantity - 1))}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors font-bold text-lg"
+                    className="w-12 h-12 flex items-center justify-center hover:bg-gray-200 rounded-xl transition-colors font-black text-xl text-gray-500"
                   >—</button>
-                  <span className="w-10 text-center font-black text-lg">{tempQuantity}</span>
+                  <span className="w-8 text-center font-black text-xl">{tempQuantity}</span>
                   <button
                     onClick={() => setTempQuantity(tempQuantity + 1)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-lg transition-colors font-bold text-lg"
+                    className="w-12 h-12 flex items-center justify-center hover:bg-gray-200 rounded-xl transition-colors font-black text-xl text-gray-500"
                   >+</button>
                 </div>
 
                 <button
                   onClick={addToCart}
-                  className="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_20px_rgba(234,88,12,0.3)] active:scale-[0.98] transition-all"
+                  className="flex-1 bg-black hover:bg-gray-900 text-white py-4 rounded-2xl font-black text-lg shadow-[0_8px_20px_rgba(0,0,0,0.15)] active:scale-[0.98] transition-all flex justify-between px-6 items-center"
                 >
-                  Agregar ${(selectedProduct.discount_price ? selectedProduct.discount_price : selectedProduct.price) * tempQuantity}
+                  <span>Agregar</span>
+                  <span>
+                      ${( () => {
+                          let basePrice = selectedProduct.discount_price ? selectedProduct.discount_price : selectedProduct.price;
+                          if (tempOptions._size && selectedProduct.sizes) {
+                             const sz = selectedProduct.sizes.find(s => s.name === tempOptions._size);
+                             if (sz) basePrice = sz.price;
+                          }
+                          let extrasTotal = 0;
+                          tempExtras.forEach(extName => {
+                              const extPrice = selectedProduct.extras?.find((e: any) => e.name === extName)?.price || 0;
+                              extrasTotal += extPrice;
+                          });
+                          return (basePrice + extrasTotal) * tempQuantity;
+                      })() }
+                  </span>
                 </button>
               </div>
             </div>

@@ -3,9 +3,11 @@ import { supabase } from '@/lib/supabase/client';
 
 export type TableStatus = 'libre' | 'mirando_menu' | 'comiendo' | 'esperando_comida' | 'necesita_ayuda' | 'pidiendo_cuenta';
 
+export type TableType = { id: string; numero: number; estado: TableStatus; session_id?: string; active_guests?: number; guests?: number; };
+
 // Este hook se utilizará en el Waiter Panel para monitorear colores de las mesas
-export function useTables(initialMockTables: any[] = []) {
-    const [tables, setTables] = useState<any[]>(initialMockTables);
+export function useTables(initialMockTables: TableType[] = []) {
+    const [tables, setTables] = useState<TableType[]>(initialMockTables);
 
     useEffect(() => {
         const fetchTables = async () => {
@@ -26,9 +28,9 @@ export function useTables(initialMockTables: any[] = []) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, payload => {
                 console.log('Realtime change in mesas:', payload);
                 if (payload.eventType === 'UPDATE') {
-                    setTables(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+                    setTables(prev => prev.map(t => t.id === payload.new.id ? payload.new as TableType : t));
                 } else if (payload.eventType === 'INSERT') {
-                    setTables(prev => [...prev.filter(t => t.id !== payload.new.id), payload.new].sort((a, b) => a.numero - b.numero));
+                    setTables(prev => [...prev.filter(t => t.id !== payload.new.id), payload.new as TableType].sort((a, b) => a.numero - b.numero));
                 } else if (payload.eventType === 'DELETE') {
                     setTables(prev => prev.filter(t => t.id !== payload.old.id));
                 }

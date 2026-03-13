@@ -257,7 +257,7 @@ export default function WaiterPanel() {
                             </div>
                             <div className="text-left w-full">
                                 <p className="font-bold text-xs md:text-sm uppercase tracking-wider truncate w-full">{getStatusLabel(table.estado)}</p>
-                                {table.guests > 0 && <p className="text-[10px] opacity-70 mt-1 font-bold">{table.guests} INVITADOS</p>}
+                                {!!table.guests && table.guests > 0 && <p className="text-[10px] opacity-70 mt-1 font-bold">{table.guests} INVITADOS</p>}
                             </div>
                         </button>
                     ))}
@@ -317,7 +317,7 @@ export default function WaiterPanel() {
                                                 </button>
                                             </div>
                                             <div className="space-y-3">
-                                                {orden.items?.map((item: any, i: number) => (
+                                                {(typeof orden.items === 'string' ? JSON.parse(orden.items) : orden.items)?.map((item: any, i: number) => (
                                                     <div key={i} className="flex justify-between text-sm">
                                                         <div className="flex gap-2 text-gray-300">
                                                             <span className="font-black text-white">{item.quantity}x</span>
