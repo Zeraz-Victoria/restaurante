@@ -340,13 +340,13 @@ export default function ClientMobileApp() {
         {/* --- HEADER --- */}
         <header className="p-4 bg-white border-b z-50 sticky top-0 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 border border-orange-500/50 flex flex-col items-center justify-center">
-              <span className="text-[10px] font-bold text-orange-500 uppercase leading-none mt-1">MESA</span>
-              <span className="text-sm font-black text-orange-400 leading-none">{mesaNum}</span>
+            <div className="w-12 h-12 rounded-full bg-orange-50 border border-orange-100 flex flex-col items-center justify-center shadow-sm shrink-0">
+              <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none mb-0.5">Mesa</span>
+              <span className="text-lg font-black text-orange-500 leading-none">{mesaNum}</span>
             </div>
             <div>
-              <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider">Mesa {mesaNum} • Invitado</p>
-              <h1 className="text-xl font-black">Tu Orden</h1>
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">BIENVENIDO AL</p>
+              <h1 className="text-xl font-black leading-none tracking-tight text-gray-900">Menú Digital</h1>
             </div>
           </div>
           {/* Waiter Assistant Button */}
@@ -394,10 +394,10 @@ export default function ClientMobileApp() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="¿Qué se te antoja hoy?"
+                    placeholder="Buscar platillos, ingredientes, bebidas..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-2xl py-3 pl-12 pr-4 font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all"
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-2xl py-3 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all placeholder:text-gray-400"
                   />
                 </div>
               </div>
