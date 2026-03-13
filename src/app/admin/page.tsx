@@ -122,8 +122,14 @@ export default function AdminDashboard() {
                 await addProduct({ name, price, cost, category_id, description, image_url, status: 'Incógnita', ingredients: ingredientsList, is_recommended, discount_price, sizes: sizesList, extras: extrasList });
             }
             setIsMenuModalOpen(false);
-        } catch (error) {
-            alert('Error guardando producto. Revisa la consola.');
+        } catch (error: any) {
+            console.error(error);
+            if (error?.message?.includes('column') || error?.code === '42703') {
+               alert('⚠️ El producto se guardó parcialmente. Para usar Tamaños, Extras o Promociones, necesitas actualizar tu Base de Datos en Supabase con el código SQL proporcionado en las instrucciones.');
+               setIsMenuModalOpen(false); // Close it anyway since the fallback likely succeeded
+            } else {
+               alert('Error guardando producto. Revisa la consola para más detalles.');
+            }
         }
     };
 

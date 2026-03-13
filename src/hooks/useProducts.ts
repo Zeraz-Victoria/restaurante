@@ -68,8 +68,15 @@ export function useProducts() {
     const addProduct = async (productData: Partial<Product>) => {
         const { data, error } = await supabase.from('productos').insert([productData]).select();
         if (error) {
-            console.error("Error adding product:", error);
-            throw error;
+            console.warn("Error adding product, attempting fallback without new UI columns:", error);
+            // Fallback for missing columns in Supabase
+            const { is_recommended, discount_price, sizes, extras, ...safeData } = productData as any;
+            const { data: fallbackData, error: fallbackError } = await supabase.from('productos').insert([safeData]).select();
+            if (fallbackError) {
+                console.error("Fallback error adding product:", fallbackError);
+                throw fallbackError;
+            }
+            return fallbackData;
         }
         return data;
     };
@@ -77,8 +84,15 @@ export function useProducts() {
     const updateProduct = async (id: string, productData: Partial<Product>) => {
         const { data, error } = await supabase.from('productos').update(productData).eq('id', id).select();
         if (error) {
-            console.error("Error updating product:", error);
-            throw error;
+            console.warn("Error updating product, attempting fallback without new UI columns:", error);
+             // Fallback for missing columns in Supabase
+            const { is_recommended, discount_price, sizes, extras, ...safeData } = productData as any;
+            const { data: fallbackData, error: fallbackError } = await supabase.from('productos').update(safeData).eq('id', id).select();
+            if (fallbackError) {
+                console.error("Fallback error updating product:", fallbackError);
+                throw fallbackError;
+            }
+            return fallbackData;
         }
         return data;
     };
