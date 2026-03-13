@@ -186,49 +186,145 @@ export default function AdminDashboard() {
     };
 
     const handleSeedDemoMenu = async () => {
-        if (!confirm('¿Deseas cargar un menú de prueba completo? Esto agregará nuevas categorías y platillos pre-configurados.')) return;
+        if (!confirm('¿Deseas cargar un menú de prueba completo? Esto agregará nuevas categorías y decenas de platillos pre-configurados.')) return;
         setIsGeneratingImage(true); // Reusing loader state
         try {
             // Create Categories
-            const catPizzas = await addCategoria('Pizzas de Origen');
-            const catBurgers = await addCategoria('Hamburguesas VIP');
-            const catBebidas = await addCategoria('Bebidas y Mixología');
+            const catNames = ['Populares', 'Tacos & Antojitos', 'Hamburguesas VIP', 'Pizzas de Origen', 'Ensaladas & Bowls', 'Postres', 'Bebidas y Mixología'];
+            for (const name of catNames) {
+                try { await addCategoria(name); } catch(e) {}
+            }
             
             // Wait for categories to be created to get their IDs
-            const tCategories = await supabase.from('categorias').select('id, name').in('name', ['Pizzas de Origen', 'Hamburguesas VIP', 'Bebidas y Mixología']);
+            const tCategories = await supabase.from('categorias').select('id, name').in('name', catNames);
             if (!tCategories.data) return;
 
-            const idPz = tCategories.data.find((c: any) => c.name === 'Pizzas de Origen')?.id;
-            const idBg = tCategories.data.find((c: any) => c.name === 'Hamburguesas VIP')?.id;
-            const idBb = tCategories.data.find((c: any) => c.name === 'Bebidas y Mixología')?.id;
+            const getId = (name: string) => tCategories.data.find((c: any) => c.name === name)?.id;
 
             // Create Products
             const demoProducts = [
+                // TACOS
                 {
-                    name: 'Pizza Margherita Clásica',
-                    description: 'Nuestra icónica pizza con salsa pomodoro San Marzano, mozzarella fresca, albahaca y un toque de aceite de oliva.',
-                    price: 250, cost: 80, category_id: idPz,
-                    image_url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&q=80&w=800',
-                    is_recommended: true,
-                    sizes: [{ name: 'Personal', price: 150 }, { name: 'Mediana', price: 210 }, { name: 'Familiar', price: 290 }],
-                    extras: [{ name: 'Orilla Rellena Adicional', price: 40 }, { name: 'Extra Queso', price: 30 }],
+                    name: 'Tacos Al Pastor (Orden de 5)',
+                    description: 'Carne de cerdo adobada tradicional, asada al trompo con piña, cebolla, cilantro y salsa roja taquera.',
+                    price: 120, cost: 45, category_id: getId('Tacos & Antojitos'),
+                    image_url: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true, isPopular: true,
+                    options: [{ name: 'Salsa', choices: ['Roja picante', 'Verde cruda', 'Sin salsa'] }, { name: 'Tortilla', choices: ['Maíz mini', 'Harina', 'Lechuga'] }],
+                    extras: [{ name: 'Extra Carne', price: 35 }, { name: 'Queso fundido', price: 20 }],
                     status: 'activo'
                 },
                 {
+                    name: 'Gringa de Asada',
+                    description: 'Doble tortilla de harina gigante, mucho queso asadero fundido y jugosa carne de res.',
+                    price: 95, cost: 35, category_id: getId('Tacos & Antojitos'),
+                    image_url: 'https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?auto=format&fit=crop&q=80&w=800',
+                    status: 'activo'
+                },
+                // BURGERS
+                {
                     name: 'La Burger del Patrón',
                     description: '200g de Ribeye molido trufado, fondue de queso suizo, cebolla caramelizada, mayonesa de ajo asado y pan brioche artesanal.',
-                    price: 280, discount_price: 220, cost: 110, category_id: idBg,
+                    price: 280, discount_price: 240, cost: 110, category_id: getId('Hamburguesas VIP'),
                     image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true, isPopular: true,
                     options: [{ name: 'Término de la carne', choices: ['Medio', '3/4', 'Bien Cocida'] }],
                     extras: [{ name: 'Tocino Crujiente', price: 35 }, { name: 'Aros de Cebolla', price: 45 }],
                     status: 'activo'
                 },
                 {
+                    name: 'Crispy Chicken Sandwich',
+                    description: 'Pechuga de pollo frita extracrujiente, ensalada de col picante, encurtidos y salsa secreta.',
+                    price: 190, cost: 60, category_id: getId('Hamburguesas VIP'),
+                    image_url: 'https://images.unsplash.com/photo-1626082895617-1c6afdfc37d4?auto=format&fit=crop&q=80&w=800',
+                    extras: [{ name: 'Papas a la francesa', price: 40 }, { name: 'Doble Pollo', price: 65 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Smash Burger Sencilla',
+                    description: '100g de carne aplastada en la plancha con costra, queso amarillo, cebolla picada y catsup.',
+                    price: 130, cost: 40, category_id: getId('Hamburguesas VIP'),
+                    image_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=800',
+                    sizes: [{ name: 'Sencilla (100g)', price: 130 }, { name: 'Doble (200g)', price: 180 }, { name: 'Triple (300g)', price: 230 }],
+                    status: 'activo'
+                },
+                // PIZZAS
+                {
+                    name: 'Pizza Margherita Clásica',
+                    description: 'Nuestra icónica pizza con salsa pomodoro San Marzano, mozzarella fresca, albahaca y un toque de aceite de oliva.',
+                    price: 250, cost: 80, category_id: getId('Pizzas de Origen'),
+                    image_url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&q=80&w=800',
+                    sizes: [{ name: 'Personal (25cm)', price: 150 }, { name: 'Mediana (35cm)', price: 210 }, { name: 'Familiar (45cm)', price: 290 }],
+                    extras: [{ name: 'Orilla Rellena Adicional', price: 45 }, { name: 'Extra Queso', price: 35 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Pizza Pepperoni Lovers',
+                    description: 'Doble cubierta de pepperoni crujiente que se hace "cazuelita" en el horno con extra queso.',
+                    price: 280, discount_price: 250, cost: 95, category_id: getId('Pizzas de Origen'),
+                    image_url: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true, isPopular: true,
+                    sizes: [{ name: 'Mediana (35cm)', price: 250 }, { name: 'Familiar (45cm)', price: 320 }],
+                    status: 'activo'
+                },
+                // SALADS
+                {
+                    name: 'Ensalada César con Pollo',
+                    description: 'Lechuga romana fresca, crutones de ajo, queso parmesano añejado y nuestro aderezo César de la casa, coronada con pechuga asada.',
+                    price: 180, cost: 55, category_id: getId('Ensaladas & Bowls'),
+                    image_url: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&q=80&w=800',
+                    options: [{ name: 'Proteína', choices: ['Pollo Asado', 'Pollo Empanizado', 'Camarones (+ $40)'] }],
+                    extras: [{ name: 'Extra Aderezo', price: 15 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Bowl Atún Poke',
+                    description: 'Cubos de atún fresco marinados en ponzu, arroz al vapor, aguacate, edamames, pepino y mayonesa spicy.',
+                    price: 220, cost: 85, category_id: getId('Ensaladas & Bowls'),
+                    image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800',
+                    status: 'activo'
+                },
+                // DESSERTS
+                {
+                    name: 'Volcán de Chocolate Fondant',
+                    description: 'Pastelito de chocolate horneado al momento, con un centro líquido y caliente, servido con helado de vainilla.',
+                    price: 140, cost: 35, category_id: getId('Postres'),
+                    image_url: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true,
+                    extras: [{ name: 'Bola de helado extra', price: 25 }, { name: 'Frutos Rojos', price: 30 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Cheesecake Estilo NY',
+                    description: 'Rebanada densa y cremosa de pay de queso horneado sobre costra de galleta, mermelada de zarzamora.',
+                    price: 110, cost: 25, category_id: getId('Postres'),
+                    image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&q=80&w=800',
+                    status: 'activo'
+                },
+                // DRINKS
+                {
                     name: 'Mojito Frutos Rojos',
                     description: 'Refrescante mezcla de ron blanco, frutos rojos macerados con menta, limón y agua mineral.',
-                    price: 130, cost: 35, category_id: idBb,
+                    price: 130, discount_price: 99, cost: 35, category_id: getId('Bebidas y Mixología'),
                     image_url: 'https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true,
                     options: [{ name: 'Base', choices: ['Con Ron', 'Con Vodka', 'Sin Alcohol'] }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Limonada Mineral Artesanal',
+                    description: 'Limonada preparada al momento, ligeramente endulzada con jarabe de agave.',
+                    price: 55, cost: 10, category_id: getId('Bebidas y Mixología'),
+                    image_url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&q=80&w=800',
+                    sizes: [{ name: 'Medio Litro', price: 55 }, { name: 'Litro', price: 85 }],
+                    options: [{ name: 'Sabor', choices: ['Clásica', 'Con Chía', 'Fresa', 'Mango'] }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Cerveza Artesanal IPA',
+                    description: 'Cerveza pálida, amarga y aromática, ideal para acompañar nuestras hamburguesas.',
+                    price: 95, cost: 40, category_id: getId('Bebidas y Mixología'),
+                    image_url: 'https://images.unsplash.com/photo-1566816183611-37d451475759?auto=format&fit=crop&q=80&w=800',
                     status: 'activo'
                 }
             ];
@@ -238,11 +334,10 @@ export default function AdminDashboard() {
                     // Try to save full product
                     await addProduct(p);
                 } catch (e: any) {
-                    // Handled internally by fallback, but we catch to keep loop going
                     console.log("Demo seed warning on product:", p.name, e);
                 }
             }
-            alert('¡Demo cargada exitosamente! Revisa el menú.');
+            alert('¡Menú Demo MASIVO cargado exitosamente! Tienes más de 10 platillos nuevos para probar.');
             refresh();
         } catch (e) {
             console.error(e);
