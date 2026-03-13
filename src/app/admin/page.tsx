@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useOrders } from "@/hooks/useOrders";
 import { useTables } from "@/hooks/useTables";
 import { useNotifications } from "@/hooks/useNotifications";
+import { supabase } from '@/lib/supabase/client';
 import {
     LayoutDashboard,
     TrendingUp,
@@ -183,6 +184,74 @@ export default function AdminDashboard() {
             refresh();
         }
     };
+
+    const handleSeedDemoMenu = async () => {
+        if (!confirm('¿Deseas cargar un menú de prueba completo? Esto agregará nuevas categorías y platillos pre-configurados.')) return;
+        setIsGeneratingImage(true); // Reusing loader state
+        try {
+            // Create Categories
+            const catPizzas = await addCategoria('Pizzas de Origen');
+            const catBurgers = await addCategoria('Hamburguesas VIP');
+            const catBebidas = await addCategoria('Bebidas y Mixología');
+            
+            // Wait for categories to be created to get their IDs
+            const tCategories = await supabase.from('categorias').select('id, name').in('name', ['Pizzas de Origen', 'Hamburguesas VIP', 'Bebidas y Mixología']);
+            if (!tCategories.data) return;
+
+            const idPz = tCategories.data.find((c: any) => c.name === 'Pizzas de Origen')?.id;
+            const idBg = tCategories.data.find((c: any) => c.name === 'Hamburguesas VIP')?.id;
+            const idBb = tCategories.data.find((c: any) => c.name === 'Bebidas y Mixología')?.id;
+
+            // Create Products
+            const demoProducts = [
+                {
+                    name: 'Pizza Margherita Clásica',
+                    description: 'Nuestra icónica pizza con salsa pomodoro San Marzano, mozzarella fresca, albahaca y un toque de aceite de oliva.',
+                    price: 250, cost: 80, category_id: idPz,
+                    image_url: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&q=80&w=800',
+                    is_recommended: true,
+                    sizes: [{ name: 'Personal', price: 150 }, { name: 'Mediana', price: 210 }, { name: 'Familiar', price: 290 }],
+                    extras: [{ name: 'Orilla Rellena Adicional', price: 40 }, { name: 'Extra Queso', price: 30 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'La Burger del Patrón',
+                    description: '200g de Ribeye molido trufado, fondue de queso suizo, cebolla caramelizada, mayonesa de ajo asado y pan brioche artesanal.',
+                    price: 280, discount_price: 220, cost: 110, category_id: idBg,
+                    image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=800',
+                    options: [{ name: 'Término de la carne', choices: ['Medio', '3/4', 'Bien Cocida'] }],
+                    extras: [{ name: 'Tocino Crujiente', price: 35 }, { name: 'Aros de Cebolla', price: 45 }],
+                    status: 'activo'
+                },
+                {
+                    name: 'Mojito Frutos Rojos',
+                    description: 'Refrescante mezcla de ron blanco, frutos rojos macerados con menta, limón y agua mineral.',
+                    price: 130, cost: 35, category_id: idBb,
+                    image_url: 'https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&q=80&w=800',
+                    options: [{ name: 'Base', choices: ['Con Ron', 'Con Vodka', 'Sin Alcohol'] }],
+                    status: 'activo'
+                }
+            ];
+
+            for (const p of demoProducts) {
+                try {
+                    // Try to save full product
+                    await addProduct(p);
+                } catch (e: any) {
+                    // Handled internally by fallback, but we catch to keep loop going
+                    console.log("Demo seed warning on product:", p.name, e);
+                }
+            }
+            alert('¡Demo cargada exitosamente! Revisa el menú.');
+            refresh();
+        } catch (e) {
+            console.error(e);
+            alert('Hubo un error cargando el demo.');
+        } finally {
+            setIsGeneratingImage(false);
+        }
+    };
+
     // --- PDF Export Logic ---
     const exportResupplyPDF = () => {
         const doc = new jsPDF();
@@ -504,6 +573,12 @@ export default function AdminDashboard() {
                                 <p className="text-gray-400 text-sm mt-1">Configura platillos y recetas de inventario.</p>
                             </div>
                             <div className="flex gap-4">
+                                <button
+                                    onClick={handleSeedDemoMenu}
+                                    className="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/20 text-purple-400 font-bold py-2 px-4 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+                                >
+                                    <Star className="w-4 h-4" fill="currentColor" /> Cargar Demo Menu
+                                </button>
                                 <button
                                     onClick={() => { setEditingCat(null); setIsCatModalOpen(true); }}
                                     className="bg-white/5 hover:bg-white/10 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2 transition-colors"
