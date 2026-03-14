@@ -91,7 +91,7 @@ export default function SuperAdminDashboard() {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto flex flex-col">
+            <main className="flex-1 overflow-y-auto pb-24 md:pb-0 flex flex-col">
                 {/* Top Navbar */}
                 <header className="h-16 bg-white border-b border-[#e5e7eb] flex items-center justify-between px-8 shadow-sm">
                     <div className="relative w-96">
@@ -215,6 +215,22 @@ export default function SuperAdminDashboard() {
 
                 </div>
             </main>
+
+            {/* Mobile/Tablet Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#e5e7eb] flex justify-around items-center px-4 pb-10 pt-3 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                <button onClick={() => setActiveView('tenants')} className={`flex flex-col items-center gap-1 ${activeView === 'tenants' ? 'text-[#111827]' : 'text-[#9ca3af]'}`}>
+                    <Building2 className="w-6 h-6" />
+                    <span className="text-[10px] font-bold">Restaurantes</span>
+                </button>
+                <button onClick={() => setActiveView('plans')} className={`flex flex-col items-center gap-1 ${activeView === 'plans' ? 'text-[#111827]' : 'text-[#9ca3af]'}`}>
+                    <CreditCard className="w-6 h-6" />
+                    <span className="text-[10px] font-bold">Planes</span>
+                </button>
+                <button onClick={() => setActiveView('support')} className={`flex flex-col items-center gap-1 ${activeView === 'support' ? 'text-[#111827]' : 'text-[#9ca3af]'}`}>
+                    <LifeBuoy className="w-6 h-6" />
+                    <span className="text-[10px] font-bold">Soporte</span>
+                </button>
+            </nav>
         </div>
     );
 }

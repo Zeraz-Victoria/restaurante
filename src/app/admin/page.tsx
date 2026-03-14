@@ -567,7 +567,7 @@ export default function AdminDashboard() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto">
+            <main className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto pb-28 lg:pb-12">
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div>
                         <h2 className="text-3xl md:text-4xl font-black tracking-tight">
@@ -1223,6 +1223,39 @@ export default function AdminDashboard() {
                 }
 
             </main>
+
+            {/* Mobile/Tablet Bottom Navigation */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#111216] border-t border-white/5 flex overflow-x-auto hide-scrollbar z-40 px-2 pb-10 pt-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                {[
+                    { id: 'dashboard', icon: LayoutDashboard, label: 'Inicio' },
+                    { id: 'menu', icon: UtensilsCrossed, label: 'Menú' },
+                    { id: 'waiter', icon: UtensilsCrossed, label: 'Sala (KDS)' },
+                    { id: 'qr', icon: QrCode, label: 'QRs' },
+                    { id: 'staff', icon: Users, label: 'Personal' },
+                    { id: 'reports', icon: TrendingUp, label: 'Reportes' },
+                    { id: 'reviews', icon: Star, label: 'Reseñas' },
+                ].map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`flex flex-col items-center justify-center min-w-[76px] py-2 gap-1.5 transition-colors ${isActive ? 'text-orange-500' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            <div className="relative">
+                                <Icon className="w-6 h-6" />
+                                {tab.id === 'waiter' && unreadCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-black w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-[#111216]">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-bold">{tab.label}</span>
+                        </button>
+                    )
+                })}
+            </nav>
         </div>
     );
 }
