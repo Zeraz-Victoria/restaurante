@@ -698,14 +698,6 @@ export default function ClientMobileApp() {
             <div className="p-6 h-full flex flex-col animate-in fade-in zoom-in-95 duration-500 overflow-y-auto pb-32">
               <div className="flex justify-between items-center mb-8 pt-8">
                  <h2 className="text-2xl font-black">Mis Pedidos</h2>
-                 {hasPreviousOrder && (
-                    <button 
-                       onClick={() => setIsFacturaOpen(true)}
-                       className="text-orange-600 bg-orange-50 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 items-center hover:bg-orange-100 transition-colors"
-                    >
-                       <ReceiptText className="w-4 h-4" /> Facturar
-                    </button>
-                 )}
               </div>
 
               {activeOrders.filter(o => o.status !== 'entregado').length === 0 ? (
@@ -1067,10 +1059,20 @@ export default function ClientMobileApp() {
 
               <button
                 onClick={clearSessionAndExit}
-                className="w-full py-3 rounded-xl font-bold text-sm bg-transparent border border-white/10 hover:bg-white/5 text-gray-400 transition-all"
+                className="w-full py-3 rounded-xl font-bold text-sm bg-transparent border border-white/10 hover:bg-white/5 text-gray-400 transition-all font-mono"
               >
-                Omitir
+                Omitir Feedback
               </button>
+
+              <div className="w-full mt-6 pt-6 border-t border-white/10 text-center">
+                 <p className="text-gray-500 text-xs mb-3">¿Necesitas comprobante fiscal?</p>
+                 <button 
+                  onClick={() => setIsFacturaOpen(true)}
+                  className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                 >
+                   <ReceiptText className="w-4 h-4" /> Solicitar Factura
+                 </button>
+              </div>
             </div>
           </div>
         )}
