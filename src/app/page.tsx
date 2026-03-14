@@ -14,7 +14,11 @@ import {
   HelpCircle,
   CheckCircle2,
   Clock,
-  Star
+  Star,
+  Banknote,
+  CreditCard,
+  Building2,
+  ShoppingBag
 } from "lucide-react";
 import Image from "next/image";
 import { useOrders } from "@/hooks/useOrders";
@@ -92,6 +96,10 @@ export default function ClientMobileApp() {
   // Table Session State
   const [tableId, setTableId] = useState<string>("unknown");
   const [mesaNum, setMesaNum] = useState<string>("?");
+  
+  // Order Logistics State
+  const [orderType, setOrderType] = useState<'local' | 'llevar'>('local');
+  const [pickupTime, setPickupTime] = useState<string>('En 15 minutos');
 
   const currentTable = tables.find((t: any) => t.id === tableId);
 
@@ -247,17 +255,18 @@ export default function ClientMobileApp() {
   const placeOrder = async () => {
     if (cart.length === 0 || isSubmitting) return;
 
-    // Check if table session exists, else warn
-    if (tableId === "unknown") {
-      alert("Por favor escanea el código QR de tu mesa antes de ordenar.");
+    // Check if table session exists for dine-in
+    if (orderType === 'local' && tableId === "unknown") {
+      alert("Por favor escanea el código QR de tu mesa antes de ordenar para comer aquí.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const isLlevar = orderType === 'llevar';
       const orderData = {
-        mesa_id: tableId,
-        mesa_nombre: `Mesa ${mesaNum}`,
+        mesa_id: isLlevar ? 'llevar_web' : tableId,
+        mesa_nombre: isLlevar ? `PARA RECOGER (${pickupTime})` : `Mesa ${mesaNum}`,
         items: cart.map(item => ({
           id: item.id,
           name: item.product.name,
@@ -367,7 +376,12 @@ export default function ClientMobileApp() {
             {/* Tooltip/Menu (Simplified for demo) */}
             <div className="absolute right-0 top-12 bg-white shadow-xl rounded-xl p-2 hidden group-focus-within:block border w-64 z-50 cursor-default">
               <p className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase">Llamar Mesero</p>
-              <button onMouseDown={() => handleWaiterCall('pago', 'La Cuenta')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-2"><ReceiptText className="w-4 h-4" /> Pedir la Cuenta</button>
+              
+              <p className="text-[10px] font-bold text-gray-400 mb-1 px-2 uppercase mt-2">Pedir la Cuenta</p>
+              <button onMouseDown={() => handleWaiterCall('pago', 'Cuenta (Efectivo)')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-1"><Banknote className="w-4 h-4" /> Pago en Efectivo</button>
+              <button onMouseDown={() => handleWaiterCall('pago', 'Cuenta (Tarjeta)')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-2"><CreditCard className="w-4 h-4" /> Pago con Tarjeta</button>
+
+              <div className="h-px bg-gray-100 my-2"></div>
 
               {!showHelpInput ? (
                 <button onMouseDown={(e) => { e.preventDefault(); setShowHelpInput(true); }} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2"><HelpCircle className="w-4 h-4" /> Ayuda General</button>
@@ -614,6 +628,42 @@ export default function ClientMobileApp() {
                   ))}
 
                   <div className="pt-6 pb-12 sm:pb-6">
+                    {/* Order Type Selector */}
+                    <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
+                      <h4 className="font-bold text-sm mb-3">¿Para comer aquí o llevar?</h4>
+                      <div className="flex gap-2 mb-4">
+                        <button 
+                           onClick={() => setOrderType('local')}
+                           className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'local' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
+                        >
+                           <Building2 className="w-4 h-4" /> Comer Aquí
+                        </button>
+                        <button 
+                           onClick={() => setOrderType('llevar')}
+                           className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'llevar' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
+                        >
+                           <ShoppingBag className="w-4 h-4" /> Para Llevar
+                        </button>
+                      </div>
+
+                      {orderType === 'llevar' && (
+                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                            <h4 className="font-bold text-sm mb-2">Horario de Recogida</h4>
+                            <select 
+                               value={pickupTime} 
+                               onChange={(e) => setPickupTime(e.target.value)}
+                               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                            >
+                               <option value="Lo antes posible">Lo antes posible</option>
+                               <option value="En 15 minutos">En 15 minutos</option>
+                               <option value="En 30 minutos">En 30 minutos</option>
+                               <option value="En 45 minutos">En 45 minutos</option>
+                               <option value="En 1 hora">En 1 hora</option>
+                            </select>
+                         </div>
+                      )}
+                    </div>
+
                     <button
                       onClick={placeOrder}
                       disabled={isSubmitting}
@@ -796,16 +846,16 @@ export default function ClientMobileApp() {
                       <h4 className="font-bold mb-4 text-base text-gray-900">Tamaño</h4>
                       <div className="flex flex-wrap gap-3">
                         {selectedProduct.sizes.map((size) => (
-                           <button
+                            <button
                              key={size.name}
                              onClick={() => setTempOptions({ ...tempOptions, _size: size.name })}
-                             className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex flex-col items-center justify-center min-w-[80px] ${
+                             className={`px-3 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center justify-center flex-1 min-w-[110px] text-center border ${
                                tempOptions._size === size.name 
-                               ? 'bg-black text-white scale-105 border-2 border-black' 
-                               : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                               ? 'bg-black text-white border-black' 
+                               : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
                              }`}
                            >
-                              <span className="text-lg">{size.name}</span>
+                              <span>{size.name}</span>
                            </button>
                         ))}
                       </div>
