@@ -32,6 +32,7 @@ import { useProducts } from "@/hooks/useProducts";
 
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useReviews } from "@/hooks/useReviews";
+import { useFacturas } from "@/hooks/useFacturas";
 import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -433,7 +434,7 @@ export default function AdminDashboard() {
         alert(`Generando y descargando PDF con QR para la Mesa ${mesaNum}...`);
     };
 
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews' | 'waiter'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews' | 'waiter' | 'facturas'>('dashboard');
     const [reportInterval, setReportInterval] = useState('semanal');
 
     // Ingredients dynamic state for the modal
@@ -443,6 +444,16 @@ export default function AdminDashboard() {
     const { tables, addTable, deleteTable } = useTables();
     const { estrellas, vacas, perros, resurtido } = useAnalytics(products, reportInterval);
     const { reviews } = useReviews();
+    const { getFacturasByRestaurant, updateFacturaStatus } = useFacturas();
+
+    // Facturas State
+    const [facturasList, setFacturasList] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (activeTab === 'facturas') {
+            getFacturasByRestaurant('default_tenant').then(data => setFacturasList(data || []));
+        }
+    }, [activeTab]);
 
     // UI States
     const activeTables = tables.filter(t => t.estado !== 'libre');
@@ -530,6 +541,13 @@ export default function AdminDashboard() {
                         Analítica Predictiva
                     </button>
                     <button
+                        onClick={() => setActiveTab('facturas')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${activeTab === 'facturas' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <Receipt className="w-5 h-5" />
+                        Facturación
+                    </button>
+                    <button
                         onClick={() => setActiveTab('reviews')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${activeTab === 'reviews' ? 'bg-white/5 text-orange-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
@@ -578,6 +596,7 @@ export default function AdminDashboard() {
                             {activeTab === 'waiter' && 'Operación (Sala y Meseros)'}
                             {activeTab === 'reports' && 'Analítica Predictiva'}
                             {activeTab === 'reviews' && 'Reseñas de Clientes'}
+                            {activeTab === 'facturas' && 'Solicitudes de Facturación'}
                         </h2>
                         <p className="text-gray-400 font-medium mt-2">
                             {activeTab === 'dashboard' && 'Métricas en tiempo real de tu operación.'}
@@ -586,6 +605,7 @@ export default function AdminDashboard() {
                             {activeTab === 'staff' && 'Administra accesos PIN para meseros y cocineros.'}
                             {activeTab === 'reports' && 'Semáforo de rentabilidad y proyecciones de stock.'}
                             {activeTab === 'reviews' && 'Calificaciones, comentarios y nivel de satisfacción de tus comensales.'}
+                            {activeTab === 'facturas' && 'Visualiza y gestiona las facturas solicitadas por tus clientes a través del menú online.'}
                         </p>
                     </div>
                     <div className="flex items-center gap-3 bg-[#111216] border border-white/5 py-2 px-4 rounded-full shadow-inner">
@@ -1222,6 +1242,81 @@ export default function AdminDashboard() {
                     )
                 }
 
+            {/* --- FACTURAS TAB --- */}
+            {activeTab === 'facturas' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-[#111216] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <h3 className="text-xl font-bold">Solicitudes Recientes</h3>
+                        </div>
+                        {facturasList.length === 0 ? (
+                            <div className="p-20 text-center text-gray-500 flex flex-col items-center">
+                                <Receipt className="w-16 h-16 mb-4 opacity-50" />
+                                <p className="text-lg">No hay solicitudes de facturación pendientes.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-white/5 text-gray-400 text-sm">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold">Fecha / Ticket</th>
+                                            <th className="px-6 py-4 font-bold">Cliente FISCAL</th>
+                                            <th className="px-6 py-4 font-bold">Detalles (Régimen / Uso CFDI)</th>
+                                            <th className="px-6 py-4 font-bold">Monto</th>
+                                            <th className="px-6 py-4 font-bold">Estado</th>
+                                            <th className="px-6 py-4 font-bold text-right" style={{minWidth: '150px'}}>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {facturasList.map((fac) => (
+                                            <tr key={fac.id} className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <p className="font-bold text-white text-sm">{new Date(fac.created_at).toLocaleDateString()}</p>
+                                                    <p className="text-xs text-gray-400">Orden ID: {fac.order_id?.substring(0,8)}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="font-bold text-white uppercase">{fac.cliente_rfc}</p>
+                                                    <p className="text-sm text-gray-400">{fac.cliente_nombre}</p>
+                                                    <p className="text-xs text-blue-400">{fac.cliente_correo}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm text-gray-300">Régimen: {fac.cliente_regimen}</p>
+                                                    <p className="text-sm text-gray-300">Uso: {fac.cliente_uso_cfdi}</p>
+                                                </td>
+                                                <td className="px-6 py-4 text-white font-mono font-bold">
+                                                    ${fac.monto_total}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${fac.estado === 'pendiente' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' : fac.estado === 'facturada' ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
+                                                        {fac.estado}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {fac.estado === 'pendiente' && (
+                                                        <button 
+                                                            onClick={async () => {
+                                                                if(confirm('¿Marcar como FACTURADA? Aparecerá como completada.')) {
+                                                                    await updateFacturaStatus(fac.id, 'facturada');
+                                                                    getFacturasByRestaurant('default_tenant').then(data => setFacturasList(data || []));
+                                                                }
+                                                            }}
+                                                            className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg text-xs transition-colors shadow-lg"
+                                                            title="Marcar como Completada"
+                                                        >
+                                                            ✔ Marcar Facturada
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             </main>
 
             {/* Mobile/Tablet Bottom Navigation */}
@@ -1233,6 +1328,7 @@ export default function AdminDashboard() {
                     { id: 'qr', icon: QrCode, label: 'QRs' },
                     { id: 'staff', icon: Users, label: 'Personal' },
                     { id: 'reports', icon: TrendingUp, label: 'Reportes' },
+                    { id: 'facturas', icon: Receipt, label: 'Facturas' },
                     { id: 'reviews', icon: Star, label: 'Reseñas' },
                 ].map(tab => {
                     const Icon = tab.icon;

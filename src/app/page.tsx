@@ -26,6 +26,7 @@ import { useProducts, Product } from "@/hooks/useProducts";
 import { useTables } from "@/hooks/useTables";
 import { useNotifications, NotificationType } from "@/hooks/useNotifications";
 import { useReviews } from "@/hooks/useReviews";
+import { useFacturas } from "@/hooks/useFacturas";
 
 // --- Obsolete Mock Data Removed ---
 
@@ -64,6 +65,18 @@ export default function ClientMobileApp() {
   const { insertOrder } = useOrders();
   const { sendNotification } = useNotifications();
   const { addReview } = useReviews();
+  const { requestInvoice } = useFacturas();
+
+  // Invoice Modal State
+  const [isFacturaOpen, setIsFacturaOpen] = useState(false);
+  const [facturaData, setFacturaData] = useState({
+    rfc: '',
+    nombre: '',
+    regimen: '',
+    uso_cfdi: '',
+    correo: ''
+  });
+  const [isFacturando, setIsFacturando] = useState(false);
 
   // Realtime order tracking for Client — listens for status changes from Kitchen
   useEffect(() => {
@@ -96,7 +109,7 @@ export default function ClientMobileApp() {
   // Table Session State
   const [tableId, setTableId] = useState<string>("unknown");
   const [mesaNum, setMesaNum] = useState<string>("?");
-  
+
   // Order Logistics State
   const [orderType, setOrderType] = useState<'local' | 'llevar'>('local');
   const [pickupTime, setPickupTime] = useState<string>('En 15 minutos');
@@ -110,6 +123,8 @@ export default function ClientMobileApp() {
       setIsReviewOpen(true);
     }
   }, [currentTable?.estado, hasPreviousOrder]);
+
+
 
   // Handle URL Params for QR Scanning
   useEffect(() => {
@@ -175,7 +190,7 @@ export default function ClientMobileApp() {
   // Helpers
   const cartTotal = cart.reduce((total, item) => {
     let base = item.product.discount_price ? item.product.discount_price : item.product.price;
-    
+
     // Override base price if a size was selected
     if (item.selectedOptions._size && item.product.sizes) {
       const sizeObj = item.product.sizes.find(s => s.name === item.selectedOptions._size);
@@ -210,26 +225,26 @@ export default function ClientMobileApp() {
 
     // Auto-select first size if available, or just set it based on the first item
     if (product.sizes && product.sizes.length > 0) {
-        setTempOptions(prev => ({ ...prev, _size: product.sizes![0].name }));
+      setTempOptions(prev => ({ ...prev, _size: product.sizes![0].name }));
     } else {
-        // If no sizes, we don't need a _size option
-        setTempOptions(prev => {
-            const next = {...prev};
-            delete next._size;
-            return next;
-        });
+      // If no sizes, we don't need a _size option
+      setTempOptions(prev => {
+        const next = { ...prev };
+        delete next._size;
+        return next;
+      });
     }
 
     // Auto-add "Momento de Entrega" for Drinks
     const isDrink = categorias.find(c => c.id === product.category_id)?.name.toLowerCase().includes('bebida');
     if (isDrink) {
-        setTempOptions(prev => ({ ...prev, 'Momento de Entrega': 'Lo antes posible' }));
+      setTempOptions(prev => ({ ...prev, 'Momento de Entrega': 'Lo antes posible' }));
     } else {
-        setTempOptions(prev => {
-            const next = {...prev};
-            delete next['Momento de Entrega'];
-            return next;
-        });
+      setTempOptions(prev => {
+        const next = { ...prev };
+        delete next['Momento de Entrega'];
+        return next;
+      });
     }
   };
 
@@ -376,7 +391,7 @@ export default function ClientMobileApp() {
             {/* Tooltip/Menu (Simplified for demo) */}
             <div className="absolute right-0 top-12 bg-white shadow-xl rounded-xl p-2 hidden group-focus-within:block border w-64 z-50 cursor-default">
               <p className="text-xs font-bold text-gray-500 mb-2 px-2 uppercase">Llamar Mesero</p>
-              
+
               <p className="text-[10px] font-bold text-gray-400 mb-1 px-2 uppercase mt-2">Pedir la Cuenta</p>
               <button onMouseDown={() => handleWaiterCall('pago', 'Cuenta (Efectivo)')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-1"><Banknote className="w-4 h-4" /> Pago en Efectivo</button>
               <button onMouseDown={() => handleWaiterCall('pago', 'Cuenta (Tarjeta)')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded font-medium flex gap-2 mb-2"><CreditCard className="w-4 h-4" /> Pago con Tarjeta</button>
@@ -432,26 +447,26 @@ export default function ClientMobileApp() {
               <div className="px-4 py-3 bg-white border-b border-gray-100 overflow-x-auto whitespace-nowrap hide-scrollbar flex gap-2 sticky top-[72px] z-10 shadow-sm">
                 {/* Virtual Category: Populares */}
                 <button
-                    onClick={() => setActiveCategory('virtual_populares')}
-                    className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_populares'
+                  onClick={() => setActiveCategory('virtual_populares')}
+                  className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_populares'
+                    ? "bg-black text-white scale-105"
+                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                    }`}
+                >
+                  🔥 Populares
+                </button>
+
+                {/* Virtual Category: Promos */}
+                {products.some(p => p.discount_price) && (
+                  <button
+                    onClick={() => setActiveCategory('virtual_promos')}
+                    className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_promos'
                       ? "bg-black text-white scale-105"
                       : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                       }`}
-                >
-                    🔥 Populares
-                </button>
-                
-                {/* Virtual Category: Promos */}
-                {products.some(p => p.discount_price) && (
-                    <button
-                        onClick={() => setActiveCategory('virtual_promos')}
-                        className={`px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm ${activeCategory === 'virtual_promos'
-                        ? "bg-black text-white scale-105"
-                        : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
-                    >
-                        💎 Promos
-                    </button>
+                  >
+                    💎 Promos
+                  </button>
                 )}
 
                 {categorias.map(cat => (
@@ -483,9 +498,9 @@ export default function ClientMobileApp() {
                       >
                         <div className="h-44 bg-gray-100 relative">
                           {product.image_url ? (
-                             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
-                             <Utensils className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            <Utensils className="w-12 h-12 text-gray-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                           )}
                           <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[10px] uppercase font-black tracking-widest px-3 py-1.5 rounded-xl border border-white/10">Chef&apos;s Pick</div>
                         </div>
@@ -493,19 +508,19 @@ export default function ClientMobileApp() {
                           <h3 className="font-black text-gray-900 text-xl truncate mb-1">{product.name}</h3>
                           <p className="text-gray-500 text-sm truncate mb-3">{product.description}</p>
                           <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                  {product.discount_price ? (
-                                      <>
-                                          <span className="font-black text-orange-600 text-xl">${product.discount_price}</span>
-                                          <span className="text-gray-400 text-sm line-through font-bold">${product.price}</span>
-                                      </>
-                                  ) : (
-                                      <span className="font-black text-gray-900 text-xl">${product.price}</span>
-                                  )}
-                              </div>
-                              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-900">
-                                <Plus className="w-5 h-5" />
-                              </div>
+                            <div className="flex items-center gap-2">
+                              {product.discount_price ? (
+                                <>
+                                  <span className="font-black text-orange-600 text-xl">${product.discount_price}</span>
+                                  <span className="text-gray-400 text-sm line-through font-bold">${product.price}</span>
+                                </>
+                              ) : (
+                                <span className="font-black text-gray-900 text-xl">${product.price}</span>
+                              )}
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-900">
+                              <Plus className="w-5 h-5" />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -517,69 +532,69 @@ export default function ClientMobileApp() {
               {/* Product List */}
               <div className="flex flex-col bg-white">
                 <div className="px-4 py-4 sticky top-[132px] z-10 bg-white/95 backdrop-blur-md border-b border-gray-100">
-                    <h2 className="font-black text-2xl text-gray-900">
-                        {searchQuery ? 'Resultados' : 
-                         activeCategory === 'virtual_populares' ? 'Populares y Recomendados' : 
-                         activeCategory === 'virtual_promos' ? 'Promociones Especiales' : 
-                         categorias.find(c => c.id === activeCategory)?.name || 'Menú'}
-                    </h2>
+                  <h2 className="font-black text-2xl text-gray-900">
+                    {searchQuery ? 'Resultados' :
+                      activeCategory === 'virtual_populares' ? 'Populares y Recomendados' :
+                        activeCategory === 'virtual_promos' ? 'Promociones Especiales' :
+                          categorias.find(c => c.id === activeCategory)?.name || 'Menú'}
+                  </h2>
                 </div>
-                
-                <div className="flex flex-col px-4 pt-2 pb-6">
-                    {products
-                    .filter((p) => {
-                        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
-                        if (searchQuery) return matchesSearch;
-                        
-                        if (activeCategory === 'virtual_populares') {
-                            return p.isPopular || p.is_recommended;
-                        }
-                        
-                        if (activeCategory === 'virtual_promos') {
-                            return !!p.discount_price;
-                        }
 
-                        return p.category_id === activeCategory;
+                <div className="flex flex-col px-4 pt-2 pb-6">
+                  {products
+                    .filter((p) => {
+                      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                      if (searchQuery) return matchesSearch;
+
+                      if (activeCategory === 'virtual_populares') {
+                        return p.isPopular || p.is_recommended;
+                      }
+
+                      if (activeCategory === 'virtual_promos') {
+                        return !!p.discount_price;
+                      }
+
+                      return p.category_id === activeCategory;
                     })
                     .map((product) => (
-                        <div
+                      <div
                         key={product.id}
                         onClick={() => openProductModal(product)}
                         className="bg-white group cursor-pointer active:bg-gray-50 transition-colors py-5 border-b border-gray-100 last:border-0"
-                        >
+                      >
                         <div className="flex gap-4 justify-between h-[120px]">
-                            <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-lg leading-tight truncate">{product.name}</h3>
-                                    <p className="text-sm text-gray-500 line-clamp-2 mt-1 pr-2 leading-relaxed">{product.description}</p>
-                                </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                    {product.discount_price ? (
-                                        <>
-                                            <span className="font-black text-orange-600 text-lg">${product.discount_price}</span>
-                                            <span className="text-gray-400 text-xs line-through font-bold">${product.price}</span>
-                                            <span className="bg-orange-100 text-orange-600 text-[10px] uppercase font-black px-2 py-0.5 rounded-md">Promo</span>
-                                        </>
-                                    ) : (
-                                        <span className="font-black text-gray-900 text-lg">${product.price}</span>
-                                    )}
-                                    {product.isPopular && !product.discount_price && (
-                                        <span className="bg-amber-100 text-amber-700 text-[10px] uppercase font-black px-2 py-0.5 rounded-md flex items-center gap-1"><Flame className="w-3 h-3"/> Top</span>
-                                    )}
-                                </div>
+                          <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-lg leading-tight truncate">{product.name}</h3>
+                              <p className="text-sm text-gray-500 line-clamp-2 mt-1 pr-2 leading-relaxed">{product.description}</p>
                             </div>
-                            
-                            <div className="w-[120px] h-full relative rounded-2xl overflow-hidden shrink-0 bg-gray-50 shadow-sm border border-black/[0.03]">
-                                {product.image_url ?
-                                    <img src={product.image_url} alt={product.name} className="object-cover w-full h-full scale-100 group-hover:scale-105 transition-transform duration-500 ease-out" />
-                                    : <Utensils className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                }
-                                <div className="absolute bottom-2 right-2 bg-white rounded-full p-1.5 shadow-md">
-                                    <Plus className="w-4 h-4 text-black" />
-                                </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              {product.discount_price ? (
+                                <>
+                                  <span className="font-black text-orange-600 text-lg">${product.discount_price}</span>
+                                  <span className="text-gray-400 text-xs line-through font-bold">${product.price}</span>
+                                  <span className="bg-orange-100 text-orange-600 text-[10px] uppercase font-black px-2 py-0.5 rounded-md">Promo</span>
+                                </>
+                              ) : (
+                                <span className="font-black text-gray-900 text-lg">${product.price}</span>
+                              )}
+                              {product.isPopular && !product.discount_price && (
+                                <span className="bg-amber-100 text-amber-700 text-[10px] uppercase font-black px-2 py-0.5 rounded-md flex items-center gap-1"><Flame className="w-3 h-3" /> Top</span>
+                              )}
                             </div>
+                          </div>
+
+                          <div className="w-[120px] h-full relative rounded-2xl overflow-hidden shrink-0 bg-gray-50 shadow-sm border border-black/[0.03]">
+                            {product.image_url ?
+                              <img src={product.image_url} alt={product.name} className="object-cover w-full h-full scale-100 group-hover:scale-105 transition-transform duration-500 ease-out" />
+                              : <Utensils className="w-8 h-8 text-gray-300 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                            }
+                            <div className="absolute bottom-2 right-2 bg-white rounded-full p-1.5 shadow-md">
+                              <Plus className="w-4 h-4 text-black" />
+                            </div>
+                          </div>
                         </div>
-                        </div>
+                      </div>
                     ))}
                 </div>
               </div>
@@ -632,35 +647,35 @@ export default function ClientMobileApp() {
                     <div className="bg-gray-50 p-4 rounded-2xl mb-6 border border-gray-100">
                       <h4 className="font-bold text-sm mb-3">¿Para comer aquí o llevar?</h4>
                       <div className="flex gap-2 mb-4">
-                        <button 
-                           onClick={() => setOrderType('local')}
-                           className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'local' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
+                        <button
+                          onClick={() => setOrderType('local')}
+                          className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'local' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
                         >
-                           <Building2 className="w-4 h-4" /> Comer Aquí
+                          <Building2 className="w-4 h-4" /> Comer Aquí
                         </button>
-                        <button 
-                           onClick={() => setOrderType('llevar')}
-                           className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'llevar' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
+                        <button
+                          onClick={() => setOrderType('llevar')}
+                          className={`flex-1 py-3 px-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors border ${orderType === 'llevar' ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-600 border-gray-200'}`}
                         >
-                           <ShoppingBag className="w-4 h-4" /> Para Llevar
+                          <ShoppingBag className="w-4 h-4" /> Para Llevar
                         </button>
                       </div>
 
                       {orderType === 'llevar' && (
-                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                            <h4 className="font-bold text-sm mb-2">Horario de Recogida</h4>
-                            <select 
-                               value={pickupTime} 
-                               onChange={(e) => setPickupTime(e.target.value)}
-                               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                            >
-                               <option value="Lo antes posible">Lo antes posible</option>
-                               <option value="En 15 minutos">En 15 minutos</option>
-                               <option value="En 30 minutos">En 30 minutos</option>
-                               <option value="En 45 minutos">En 45 minutos</option>
-                               <option value="En 1 hora">En 1 hora</option>
-                            </select>
-                         </div>
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <h4 className="font-bold text-sm mb-2">Horario de Recogida</h4>
+                          <select
+                            value={pickupTime}
+                            onChange={(e) => setPickupTime(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                          >
+                            <option value="Lo antes posible">Lo antes posible</option>
+                            <option value="En 15 minutos">En 15 minutos</option>
+                            <option value="En 30 minutos">En 30 minutos</option>
+                            <option value="En 45 minutos">En 45 minutos</option>
+                            <option value="En 1 hora">En 1 hora</option>
+                          </select>
+                        </div>
                       )}
                     </div>
 
@@ -681,7 +696,17 @@ export default function ClientMobileApp() {
           {/* TAB: TRACKING */}
           {activeTab === 'tracking' && (
             <div className="p-6 h-full flex flex-col animate-in fade-in zoom-in-95 duration-500 overflow-y-auto pb-32">
-              <h2 className="text-2xl font-black mb-8 text-center pt-8">Mis Pedidos</h2>
+              <div className="flex justify-between items-center mb-8 pt-8">
+                 <h2 className="text-2xl font-black">Mis Pedidos</h2>
+                 {hasPreviousOrder && (
+                    <button 
+                       onClick={() => setIsFacturaOpen(true)}
+                       className="text-orange-600 bg-orange-50 px-4 py-2 rounded-xl text-sm font-bold flex gap-2 items-center hover:bg-orange-100 transition-colors"
+                    >
+                       <ReceiptText className="w-4 h-4" /> Facturar
+                    </button>
+                 )}
+              </div>
 
               {activeOrders.filter(o => o.status !== 'entregado').length === 0 ? (
                 <div className="text-center py-20 text-gray-400">
@@ -783,7 +808,7 @@ export default function ClientMobileApp() {
 
             {/* Sheet Content */}
             <div className="bg-[#f9fafb] w-full rounded-t-[2.5rem] h-[92vh] overflow-hidden flex flex-col shadow-[0_-10px_50px_rgba(0,0,0,0.15)] relative z-10 slide-in-from-bottom-full mt-auto mb-0 duration-500 ease-out">
-              
+
               {/* Floating Close Button */}
               <button
                 onClick={() => setSelectedProduct(null)}
@@ -791,7 +816,7 @@ export default function ClientMobileApp() {
               >
                 <ChevronRight className="w-6 h-6 rotate-180" />
               </button>
-              
+
               <button
                 onClick={() => setActiveTab('cart')}
                 className="absolute top-4 right-4 bg-white/80 backdrop-blur-md rounded-full p-2.5 text-gray-900 shadow-sm z-20 hover:bg-white active:scale-95 transition-all"
@@ -816,25 +841,25 @@ export default function ClientMobileApp() {
               {/* Scrollable details */}
               <div className="px-6 pb-6 overflow-y-auto flex-1 bg-[#f9fafb] text-gray-900 relative -mt-10 rounded-t-[2.5rem] z-10">
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
-                
+
                 <h2 className="text-3xl font-black leading-tight text-center">{selectedProduct.name}</h2>
                 <p className="text-gray-500 mt-3 leading-relaxed text-center max-w-sm mx-auto">{selectedProduct.description}</p>
-                
+
                 {/* Dynamically update the main price based on selected size or base price */}
                 <div className="flex items-center justify-center gap-3 mt-4">
                   {selectedProduct.sizes && selectedProduct.sizes.length > 0 ? (
                     (() => {
-                        const selectedSizeObj = selectedProduct.sizes?.find(s => s.name === tempOptions._size) || selectedProduct.sizes[0];
-                        return <p className="text-3xl font-black text-gray-900">${selectedSizeObj.price}</p>;
+                      const selectedSizeObj = selectedProduct.sizes?.find(s => s.name === tempOptions._size) || selectedProduct.sizes[0];
+                      return <p className="text-3xl font-black text-gray-900">${selectedSizeObj.price}</p>;
                     })()
                   ) : (
                     selectedProduct.discount_price ? (
-                        <>
+                      <>
                         <p className="text-3xl font-black text-gray-900">${selectedProduct.discount_price}</p>
                         <p className="text-xl font-bold text-gray-400 line-through">${selectedProduct.price}</p>
-                        </>
+                      </>
                     ) : (
-                        <p className="text-3xl font-black text-gray-900">${selectedProduct.price}</p>
+                      <p className="text-3xl font-black text-gray-900">${selectedProduct.price}</p>
                     )
                   )}
                 </div>
@@ -846,17 +871,16 @@ export default function ClientMobileApp() {
                       <h4 className="font-bold mb-4 text-base text-gray-900">Tamaño</h4>
                       <div className="flex flex-wrap gap-3">
                         {selectedProduct.sizes.map((size) => (
-                            <button
-                             key={size.name}
-                             onClick={() => setTempOptions({ ...tempOptions, _size: size.name })}
-                             className={`px-3 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center justify-center flex-1 min-w-[110px] text-center border ${
-                               tempOptions._size === size.name 
-                               ? 'bg-black text-white border-black' 
-                               : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                             }`}
-                           >
-                              <span>{size.name}</span>
-                           </button>
+                          <button
+                            key={size.name}
+                            onClick={() => setTempOptions({ ...tempOptions, _size: size.name })}
+                            className={`px-3 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center justify-center flex-1 min-w-[110px] text-center border ${tempOptions._size === size.name
+                                ? 'bg-black text-white border-black'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                              }`}
+                          >
+                            <span>{size.name}</span>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -870,11 +894,10 @@ export default function ClientMobileApp() {
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {opt.choices.map((choice: string) => (
-                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[100px] text-center ${
-                            tempOptions[opt.name] === choice 
-                            ? 'bg-black text-white border-black shadow-md' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                          }`}>
+                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[100px] text-center ${tempOptions[opt.name] === choice
+                              ? 'bg-black text-white border-black shadow-md'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            }`}>
                             <input
                               type="radio"
                               name={opt.name}
@@ -898,11 +921,10 @@ export default function ClientMobileApp() {
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {['Lo antes posible', 'Junto con la comida'].map((choice: string) => (
-                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[120px] text-center ${
-                            tempOptions['Momento de Entrega'] === choice 
-                            ? 'bg-black text-white border-black shadow-md' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                          }`}>
+                          <label key={choice} className={`flex items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[120px] text-center ${tempOptions['Momento de Entrega'] === choice
+                              ? 'bg-black text-white border-black shadow-md'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            }`}>
                             <input
                               type="radio"
                               name="momento_entrega"
@@ -928,26 +950,26 @@ export default function ClientMobileApp() {
                         {selectedProduct.extras.map((extra: any) => {
                           const isSelected = tempExtras.includes(extra.name);
                           return (
-                          <label key={extra.name} className={`flex flex-col items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[110px] text-center relative overflow-hidden ${
-                             isSelected
-                            ? 'bg-black text-white border-black shadow-md' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                          }`}>
-                            <span className="font-bold">{extra.name}</span>
-                            <span className={isSelected ? "text-gray-300 text-xs mt-1" : "text-gray-500 text-xs mt-1"}>+${extra.price}</span>
-                            {isSelected && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                  e.preventDefault(); 
+                            <label key={extra.name} className={`flex flex-col items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors text-sm font-bold flex-1 min-w-[110px] text-center relative overflow-hidden ${isSelected
+                                ? 'bg-black text-white border-black shadow-md'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                              }`}>
+                              <span className="font-bold">{extra.name}</span>
+                              <span className={isSelected ? "text-gray-300 text-xs mt-1" : "text-gray-500 text-xs mt-1"}>+${extra.price}</span>
+                              {isSelected && <div className="absolute top-1 right-1"><CheckCircle2 className="w-3 h-3 text-white" /></div>}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   if (isSelected) setTempExtras(tempExtras.filter(x => x !== extra.name));
                                   else setTempExtras([...tempExtras, extra.name]);
-                              }}
-                              className="hidden"
-                            >
-                            </button>
-                          </label>
-                        )})}
+                                }}
+                                className="hidden"
+                              >
+                              </button>
+                            </label>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -986,19 +1008,19 @@ export default function ClientMobileApp() {
                 >
                   <span>Agregar</span>
                   <span>
-                      ${( () => {
-                          let basePrice = selectedProduct.discount_price ? selectedProduct.discount_price : selectedProduct.price;
-                          if (tempOptions._size && selectedProduct.sizes) {
-                             const sz = selectedProduct.sizes.find(s => s.name === tempOptions._size);
-                             if (sz) basePrice = sz.price;
-                          }
-                          let extrasTotal = 0;
-                          tempExtras.forEach(extName => {
-                              const extPrice = selectedProduct.extras?.find((e: any) => e.name === extName)?.price || 0;
-                              extrasTotal += extPrice;
-                          });
-                          return (basePrice + extrasTotal) * tempQuantity;
-                      })() }
+                    ${(() => {
+                      let basePrice = selectedProduct.discount_price ? selectedProduct.discount_price : selectedProduct.price;
+                      if (tempOptions._size && selectedProduct.sizes) {
+                        const sz = selectedProduct.sizes.find(s => s.name === tempOptions._size);
+                        if (sz) basePrice = sz.price;
+                      }
+                      let extrasTotal = 0;
+                      tempExtras.forEach(extName => {
+                        const extPrice = selectedProduct.extras?.find((e: any) => e.name === extName)?.price || 0;
+                        extrasTotal += extPrice;
+                      });
+                      return (basePrice + extrasTotal) * tempQuantity;
+                    })()}
                   </span>
                 </button>
               </div>
