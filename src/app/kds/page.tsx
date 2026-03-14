@@ -103,9 +103,13 @@ function OrderCard({
     onStart: () => void,
     onReady: () => void
 }) {
-    const timePlacedObj = order.created_at ? new Date(order.created_at) : new Date();
+    // Safari Date Parse Fallback (handles strings without 'T' or weird timezone offsets)
+    const safeDateStr = order.created_at ? String(order.created_at).replace(' ', 'T') : '';
+    const parsedTime = Date.parse(safeDateStr);
+    const timePlacedObj = isNaN(parsedTime) ? new Date() : new Date(parsedTime);
+    
     const elapsedMs = currentTime.getTime() - timePlacedObj.getTime();
-    const elapsedMins = Math.floor(elapsedMs / 60000);
+    const elapsedMins = Math.max(0, Math.floor(elapsedMs / 60000));
     const isOverdue = elapsedMins >= (order.tiempo_prep_estimado || 15);
 
     // UI State checks based on DB order status
@@ -116,9 +120,10 @@ function OrderCard({
         ? "bg-blue-600/90"
         : (isOverdue ? "bg-red-600 animate-pulse-fast" : "bg-[#252830]");
 
-    let itemsArray = [];
+    let itemsArray: any[] = [];
     try {
-        itemsArray = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+        const parsed = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+        itemsArray = Array.isArray(parsed) ? parsed : [];
     } catch (e) {
         itemsArray = [];
     }
