@@ -54,8 +54,9 @@ export function useFacturas() {
     }
   };
 
-  const getFacturasByRestaurant = async (restaurantId: string) => {
+  const getFacturasByRestaurant = async (restaurantId?: string) => {
     setIsLoading(true);
+    const rid = restaurantId || (typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') : null) || 'default_tenant';
     try {
       const { data, error } = await supabase
         .from('facturas')
@@ -63,12 +64,11 @@ export function useFacturas() {
             *,
             ordenes!inner (
                 id,
-                mesa_nombre,
                 items,
                 total
             )
         `)
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', rid)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

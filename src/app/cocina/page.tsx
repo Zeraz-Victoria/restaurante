@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Play, CheckCircle2, AlertTriangle, PlusCircle } from "lucide-react";
+import { Clock, Play, CheckCircle2, AlertTriangle, PlusCircle, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useOrders } from "@/hooks/useOrders";
 import { useTables } from "@/hooks/useTables";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAuth } from "@/hooks/useAuth";
 
 // --- Types ---
 type OrderStatus = 'pendiente' | 'cocinando' | 'listo';
@@ -14,6 +16,13 @@ export default function KitchenDisplaySystemV2() {
     const { updateTableStatus } = useTables();
     const { sendNotification } = useNotifications();
     const [currentTime, setCurrentTime] = useState(new Date());
+    const router = useRouter();
+    useAuth('restaurant');
+
+    const handleLogout = () => {
+        localStorage.clear();
+        router.push('/login');
+    };
 
     // Update real-time clock every second for accurate overdue calculations
     useEffect(() => {
@@ -55,6 +64,13 @@ export default function KitchenDisplaySystemV2() {
                     </h1>
                 </div>
                 <div className="flex items-center gap-6">
+                    <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-2 rounded-xl transition-all font-bold text-sm border border-red-500/10"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Salir
+                    </button>
                     <div className="text-right">
                         <p className="text-sm text-gray-400 font-bold uppercase tracking-wider">Comandas Activas</p>
                         <p className="text-2xl font-black leading-none">{activeOrders.length}</p>

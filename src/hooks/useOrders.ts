@@ -6,6 +6,7 @@ export type OrderStatus = 'pendiente' | 'cocinando' | 'listo' | 'entregado';
 export interface Order {
     id: string;
     mesa_id: string;
+    restaurant_id?: string;
     estado: OrderStatus;
     items: any[] | string; // JSON
     total: number;
@@ -17,11 +18,14 @@ export function useOrders(initialMockOrders: Order[] = []) {
     const [orders, setOrders] = useState<Order[]>(initialMockOrders);
 
     useEffect(() => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+
         // Fetch initial active orders
         const fetchOrders = async () => {
             const { data, error } = await supabase
                 .from('ordenes')
                 .select('*')
+                .eq('restaurant_id', restaurantId)
                 .in('estado', ['pendiente', 'cocinando', 'listo'])
                 .order('created_at', { ascending: true });
 
@@ -32,10 +36,15 @@ export function useOrders(initialMockOrders: Order[] = []) {
         fetchOrders();
 
         // Subscribe to real-time changes
-        const channelName = `ordenes-realtime-${Math.random().toString(36).substring(7)}`;
+        const channelName = `ordenes-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
         const subscription = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, payload => {
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'ordenes',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, payload => {
                 console.log('Realtime change in ordenes:', payload);
                 if (payload.eventType === 'INSERT') {
                     setOrders(prev => [...prev, payload.new as Order]);
@@ -78,9 +87,10 @@ export function useOrders(initialMockOrders: Order[] = []) {
     };
 
     const insertOrder = async (orderData: Partial<Order>) => {
+        const restaurantId = typeof window !== 'undefined' ? (localStorage.getItem('restaurant_id') || orderData.restaurant_id || 'default_tenant') : 'default_tenant';
         const { data, error } = await supabase
             .from('ordenes')
-            .insert([{ ...orderData }])
+            .insert([{ ...orderData, restaurant_id: restaurantId }])
             .select();
 
         if (error) {

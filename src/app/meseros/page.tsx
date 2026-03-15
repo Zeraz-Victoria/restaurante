@@ -15,7 +15,9 @@ import {
 import { useTables } from "@/hooks/useTables";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useOrders } from "@/hooks/useOrders";
-import { X, Receipt } from "lucide-react";
+import { X, Receipt, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 // --- Mock Data & Types ---
 type TableStatus = 'libre' | 'mirando_menu' | 'comiendo' | 'necesita_ayuda' | 'pidiendo_cuenta' | 'esperando_comida';
@@ -69,6 +71,13 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 export default function WaiterPanel() {
     // Retiramos activeTab, el dashboard ahora es unificado
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+    const router = useRouter();
+    useAuth('restaurant');
+
+    const handleLogout = () => {
+        localStorage.clear();
+        router.push('/login');
+    };
 
     // Supabase Real-time Hooks (sin mocks — datos reales)
     const { tables, updateTableStatus } = useTables();

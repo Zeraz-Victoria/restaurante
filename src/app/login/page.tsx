@@ -4,26 +4,68 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Utensils, ArrowRight } from "lucide-react";
 
+import { supabase } from "@/lib/supabase/client";
+
 export default function LoginPage() {
     const [accessCode, setAccessCode] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
-    const handleLogin = (e: React.FormEvent) => {
+    // Auto-redirect if already logged in as SuperAdmin or Restaurant
+    useState(() => {
+        if (typeof window !== 'undefined') {
+            const isSuper = localStorage.getItem('superadmin_logged_in') === 'true';
+            if (isSuper) {
+                router.push('/superadmin');
+            }
+        }
+    });
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulation of Tenant Login validation. 
-        // In reality, this checks against the `restaurantes` table where code = accessCode.
-        setTimeout(() => {
-            if (accessCode.length >= 4) {
-                // If valid, direct to /admin (their tenant portal)
-                router.push("/admin");
-            } else {
-                setIsLoading(false);
+        const normalizedCode = accessCode.trim().toUpperCase();
+
+        // SuperAdmin Backdoor for demo/dev
+        if (normalizedCode === 'SUPER-ADMIN-360') {
+            alert("Acceso de SuperAdmin detectado. Iniciando sesión maestra...");
+            localStorage.clear();
+            localStorage.setItem('superadmin_logged_in', 'true');
+            router.push('/superadmin');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('restaurantes')
+                .select('*')
+                .eq('access_code', normalizedCode)
+                .single();
+
+            if (error || !data) {
                 alert("Código inválido. Por favor intenta de nuevo.");
+                setIsLoading(false);
+                return;
             }
-        }, 800);
+
+            if (data.status === 'Suspended') {
+                alert("Este restaurante está suspendido. Contacta al administrador.");
+                setIsLoading(false);
+                return;
+            }
+
+            // Save restaurant info
+            localStorage.clear(); // Clear any previous superadmin or other restaurant sessions
+            localStorage.setItem('restaurant_id', data.id);
+            localStorage.setItem('restaurant_name', data.name);
+            
+            router.push("/admin");
+        } catch (error) {
+            console.error('Login error:', error);
+            alert("Error al iniciar sesión. Inténtalo de nuevo.");
+            setIsLoading(false);
+        }
     };
 
     return (

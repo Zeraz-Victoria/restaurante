@@ -14,10 +14,13 @@ export function useReviews() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+
         const fetchReviews = async () => {
             const { data, error } = await supabase
                 .from('resenas')
                 .select('*')
+                .eq('restaurant_id', restaurantId)
                 .order('created_at', { ascending: false });
 
             if (data) setReviews(data);
@@ -28,10 +31,15 @@ export function useReviews() {
         fetchReviews();
 
         // Optional realtime hook
-        const channelName = `resenas-realtime-${Math.random().toString(36).substring(7)}`;
+        const channelName = `resenas-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
         const subscription = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'resenas' }, payload => {
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'resenas',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, payload => {
                 if (payload.eventType === 'INSERT') {
                     setReviews(prev => [payload.new as Review, ...prev]);
                 } else if (payload.eventType === 'DELETE') {
@@ -46,6 +54,7 @@ export function useReviews() {
     }, []);
 
     const addReview = async (mesa_id: string, calificacion: number, comentario: string) => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
         // Optimistic
         const tempId = Date.now().toString();
         const newReview = { id: tempId, mesa_id, calificacion, comentario, created_at: new Date().toISOString() };
@@ -53,7 +62,7 @@ export function useReviews() {
 
         const { data, error } = await supabase
             .from('resenas')
-            .insert([{ mesa_id, calificacion, comentario }])
+            .insert([{ mesa_id, calificacion, comentario, restaurant_id: restaurantId }])
             .select()
             .single();
 

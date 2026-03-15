@@ -7,10 +7,13 @@ export function useNotifications(initialMockNotifs: any[] = []) {
     const [notifications, setNotifications] = useState<any[]>(initialMockNotifs);
 
     useEffect(() => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+
         const fetchNotifs = async () => {
             const { data, error } = await supabase
                 .from('solicitudes_ayuda')
                 .select('*')
+                .eq('restaurant_id', restaurantId)
                 .eq('leido', false)
                 .order('created_at', { ascending: false });
 
@@ -20,14 +23,24 @@ export function useNotifications(initialMockNotifs: any[] = []) {
 
         fetchNotifs();
 
-        const channelName = `solicitudes-realtime-${Math.random().toString(36).substring(7)}`;
+        const channelName = `solicitudes-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'solicitudes_ayuda' }, payload => {
+            .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'solicitudes_ayuda',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, payload => {
                 console.log('Realtime INSERT in solicitudes_ayuda:', payload);
                 setNotifications(prev => [payload.new, ...prev]);
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'solicitudes_ayuda' }, payload => {
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'solicitudes_ayuda',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, payload => {
                 console.log('Realtime UPDATE in solicitudes_ayuda:', payload);
                 setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
             })
@@ -39,8 +52,9 @@ export function useNotifications(initialMockNotifs: any[] = []) {
     }, []);
 
     const sendNotification = async (payload: any) => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
         console.log("Sending notification payload:", payload);
-        const { error } = await supabase.from('solicitudes_ayuda').insert([payload]);
+        const { error } = await supabase.from('solicitudes_ayuda').insert([{ ...payload, restaurant_id: restaurantId }]);
         if (error) console.error("Error sending notification:", error);
     };
 

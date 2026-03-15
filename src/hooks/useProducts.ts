@@ -33,10 +33,11 @@ export function useProducts() {
 
     const fetchData = async () => {
         setLoading(true);
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
         try {
             const [catRes, prodRes] = await Promise.all([
-                supabase.from('categorias').select('*').order('order_index'),
-                supabase.from('productos').select('*').order('created_at', { ascending: false })
+                supabase.from('categorias').select('*').eq('restaurant_id', restaurantId).order('order_index'),
+                supabase.from('productos').select('*').eq('restaurant_id', restaurantId).order('created_at', { ascending: false })
             ]);
 
             if (catRes.data) setCategorias(catRes.data);
@@ -49,13 +50,27 @@ export function useProducts() {
     };
 
     useEffect(() => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
         fetchData();
 
         // Optional realtime hook for products
-        const channelName = `public:productos-${Math.random().toString(36).substring(7)}`;
+        const channelName = `public:productos-${restaurantId}-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'productos',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, () => {
+                fetchData(); // Refresh all on any change
+            })
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'categorias',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, () => {
                 fetchData(); // Refresh all on any change
             })
             .subscribe();
@@ -66,7 +81,8 @@ export function useProducts() {
     }, []);
 
     const addProduct = async (productData: Partial<Product>) => {
-        const { data, error } = await supabase.from('productos').insert([productData]).select();
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+        const { data, error } = await supabase.from('productos').insert([{ ...productData, restaurant_id: restaurantId }]).select();
         if (error) {
             console.warn("Error adding product, attempting fallback without new UI columns:", error);
             // Fallback for missing columns in Supabase
@@ -106,8 +122,9 @@ export function useProducts() {
     };
 
     const addCategoria = async (name: string) => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
         const newOrder = categorias.length > 0 ? Math.max(...categorias.map(c => c.order_index)) + 1 : 1;
-        const { data, error } = await supabase.from('categorias').insert([{ name, order_index: newOrder }]).select();
+        const { data, error } = await supabase.from('categorias').insert([{ name, order_index: newOrder, restaurant_id: restaurantId }]).select();
         if (error) throw error;
         return data;
     };

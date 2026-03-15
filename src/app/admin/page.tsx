@@ -5,6 +5,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { useTables } from "@/hooks/useTables";
 import { useNotifications } from "@/hooks/useNotifications";
 import { supabase } from '@/lib/supabase/client';
+import { useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     TrendingUp,
@@ -25,6 +26,7 @@ import {
     CheckCircle2,
     Coffee,
     X,
+    LogOut,
     Image as ImageIcon
 } from "lucide-react";
 
@@ -37,9 +39,11 @@ import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-import WaiterPanel from "@/app/waiter/page";
+import WaiterPanel from "@/app/meseros/page";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminDashboard() {
+    useAuth('restaurant');
     const { products, categorias, addProduct, updateProduct, deleteProduct, loading, addCategoria, updateCategoria, deleteCategoria, refresh } = useProducts();
     const { notifications } = useNotifications();
     const unreadCount = notifications.filter(n => !n.leido).length;
@@ -434,7 +438,13 @@ export default function AdminDashboard() {
         alert(`Generando y descargando PDF con QR para la Mesa ${mesaNum}...`);
     };
 
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews' | 'waiter' | 'facturas'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'qr' | 'staff' | 'reports' | 'reviews' | 'meseros' | 'facturas'>('dashboard');
+    const router = useRouter();
+
+    const handleLogout = () => {
+        localStorage.clear();
+        router.push('/login');
+    };
     const [reportInterval, setReportInterval] = useState('semanal');
 
     // Ingredients dynamic state for the modal
@@ -556,12 +566,12 @@ export default function AdminDashboard() {
                         Reseñas de Clientes
                     </button>
                     <button
-                        onClick={() => setActiveTab('waiter')}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all relative ${activeTab === 'waiter' ? 'bg-orange-600 shadow-[0_0_20px_rgba(234,88,12,0.3)] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/5'}`}
+                        onClick={() => setActiveTab('meseros')}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all relative ${activeTab === 'meseros' ? 'bg-orange-600 shadow-[0_0_20px_rgba(234,88,12,0.3)] text-white' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/5'}`}
                     >
                         <div className="flex items-center gap-3">
                             <UtensilsCrossed className="w-5 h-5" />
-                            Operación (Sala)
+                            Operación (Meseros)
                         </div>
                         {unreadCount > 0 && (
                             <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.5)]">
@@ -571,11 +581,16 @@ export default function AdminDashboard() {
                     </button>
                 </nav>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center">
-                            A
-                        </div>
+                <div className="mt-auto space-y-4 pt-6 border-t border-white/5">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-500/10 rounded-xl transition-all shadow-lg"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        Cerrar Sesión
+                    </button>
+                    <div className="flex items-center gap-3 px-4">
+                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center font-bold">AV</div>
                         <div>
                             <p className="text-sm font-bold">Adrian V.</p>
                             <p className="text-xs text-gray-500">Propietario</p>
@@ -593,7 +608,7 @@ export default function AdminDashboard() {
                             {activeTab === 'menu' && 'Gestor de Menú e Inventario'}
                             {activeTab === 'qr' && 'Gestor QR de Mesas'}
                             {activeTab === 'staff' && 'Control de Personal'}
-                            {activeTab === 'waiter' && 'Operación (Sala y Meseros)'}
+                            {activeTab === 'meseros' && 'Operación (Sala y Meseros)'}
                             {activeTab === 'reports' && 'Analítica Predictiva'}
                             {activeTab === 'reviews' && 'Reseñas de Clientes'}
                             {activeTab === 'facturas' && 'Solicitudes de Facturación'}
@@ -823,7 +838,7 @@ export default function AdminDashboard() {
                                         <X className="w-5 h-5" />
                                     </button>
                                     <div className="w-40 h-40 bg-white rounded-xl mb-6 flex items-center justify-center p-3 shadow-[0_0_20px_rgba(255,255,255,0.1)] group-hover:scale-105 transition-transform cursor-pointer">
-                                        <QRCodeSVG value={`${baseUrl}?table=${table.id}&mesaNum=${table.numero}`} className="w-full h-full text-black" />
+                                        <QRCodeSVG value={`${baseUrl}?table=${table.id}&mesaNum=${table.numero}&restaurant_id=${localStorage.getItem('restaurant_id') || 'default_tenant'}`} className="w-full h-full text-black" />
                                     </div>
                                     <h4 className="text-xl font-black mb-1">Mesa {table.numero}</h4>
                                     <p className="text-xs text-gray-500 truncate w-full px-2">{table.id}</p>
@@ -879,7 +894,7 @@ export default function AdminDashboard() {
                 )}
 
                 {/* --- WAITER EMBEDDED TAB --- */}
-                {activeTab === 'waiter' && (
+                {activeTab === 'meseros' && (
                     <div className="w-full h-full bg-[#0f1115] rounded-3xl overflow-hidden border border-white/5">
                         {/* Notice that WaiterPanel acts standalone, we just wrap it */}
                         <div className="h-[800px] w-full overflow-y-auto custom-scrollbar">

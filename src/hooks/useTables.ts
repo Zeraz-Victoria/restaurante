@@ -10,10 +10,13 @@ export function useTables(initialMockTables: TableType[] = []) {
     const [tables, setTables] = useState<TableType[]>(initialMockTables);
 
     useEffect(() => {
+        const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+
         const fetchTables = async () => {
             const { data, error } = await supabase
                 .from('mesas')
                 .select('*')
+                .eq('restaurant_id', restaurantId)
                 .order('numero', { ascending: true });
 
             if (data && data.length > 0) setTables(data);
@@ -22,10 +25,15 @@ export function useTables(initialMockTables: TableType[] = []) {
 
         fetchTables();
 
-        const channelName = `mesas-realtime-${Math.random().toString(36).substring(7)}`;
+        const channelName = `mesas-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
         const channel = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'mesas' }, payload => {
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'mesas',
+                filter: `restaurant_id=eq.${restaurantId}`
+            }, payload => {
                 console.log('Realtime change in mesas:', payload);
                 if (payload.eventType === 'UPDATE') {
                     setTables(prev => prev.map(t => t.id === payload.new.id ? payload.new as TableType : t));
@@ -51,9 +59,10 @@ export function useTables(initialMockTables: TableType[] = []) {
 
     const addTable = async () => {
         try {
+            const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
             const nextNum = tables.length > 0 ? Math.max(...tables.map(t => typeof t.numero === 'number' ? t.numero : parseInt(t.numero) || 0)) + 1 : 1;
             console.log("Adding table number:", nextNum);
-            const { data, error } = await supabase.from('mesas').insert([{ numero: nextNum, estado: 'libre' }]).select();
+            const { data, error } = await supabase.from('mesas').insert([{ numero: nextNum, estado: 'libre', restaurant_id: restaurantId }]).select();
             if (error) {
                 console.error("Supabase insert error:", error);
                 alert("Error creando mesa: " + error.message);

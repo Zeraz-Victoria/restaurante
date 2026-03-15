@@ -26,10 +26,13 @@ export function useAnalytics(products: Product[], interval: string = 'semanal') 
             now.setDate(now.getDate() - daysToSubtract);
             const startDateStr = now.toISOString();
 
+            const restaurantId = typeof window !== 'undefined' ? localStorage.getItem('restaurant_id') || 'default_tenant' : 'default_tenant';
+
             // Fetch orders matching the timeframe
             const { data, error } = await supabase
                 .from('ordenes')
                 .select('items, created_at')
+                .eq('restaurant_id', restaurantId)
                 .gte('created_at', startDateStr);
 
             if (data) setAllOrders(data);

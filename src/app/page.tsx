@@ -104,7 +104,7 @@ export default function ClientMobileApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Order Tracking State
-  type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado', total: number, restaurant_id?: string };
+  type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado', total: number, restaurant_id?: string, type: 'local' | 'llevar' };
   const [activeOrders, setActiveOrders] = useState<OrderProgress[]>([]);
 
   // Table Session State
@@ -133,6 +133,11 @@ export default function ClientMobileApp() {
       const params = new URLSearchParams(window.location.search);
       const tId = params.get('table');
       const mNum = params.get('mesaNum');
+      const rid = params.get('restaurant_id');
+
+      if (rid) {
+        localStorage.setItem('restaurant_id', rid);
+      }
 
       if (tId && mNum) {
         setTableId(tId);
@@ -302,15 +307,22 @@ export default function ClientMobileApp() {
       const newOrder = await insertOrder(orderData);
 
       // 4. Update UI State for ongoing experience
-      const newOrderId = (newOrder as any)?.id || (newOrder as any)?.[0]?.id || Math.random().toString(36).substr(2, 9);
+      const firstResult = Array.isArray(newOrder) ? newOrder[0] : newOrder;
+      const newOrderId = (firstResult as any)?.id || Math.random().toString(36).substr(2, 9);
+      const restaurantId = (firstResult as any)?.restaurant_id || 'default_tenant';
       const orderTitle = cart.length === 1 ? cart[0].product.name : `${cart.length} Productos`;
 
       setCart([]); // Clean cart
       setActiveTab('tracking'); // Send user to tracking tab
 
       // --- Connect to Tables Logic ---
-      // Set to esperando_comida whenever a new order is received
-      await updateTableStatus(tableId, 'esperando_comida');
+      if (isLlevar) {
+        // For takeaway, ensure table is marked as libre (desmarcar mesa)
+        await updateTableStatus(tableId, 'libre');
+      } else {
+        // Set to esperando_comida whenever a new order is received
+        await updateTableStatus(tableId, 'esperando_comida');
+      }
 
       // Add to active orders array
       setActiveOrders(prev => [...prev, { 
@@ -318,11 +330,12 @@ export default function ClientMobileApp() {
         name: orderTitle, 
         status: 'pendiente', 
         total: cartTotal,
-        restaurant_id: (newOrder as any)?.restaurant_id || 'default_tenant'
+        restaurant_id: restaurantId,
+        type: orderType
       }]);
 
       // Always flag that this table has an active session from now on
-      setHasPreviousOrder(true);
+      if (!isLlevar) setHasPreviousOrder(true);
     } catch (e) {
       console.error("Error setting table active status or inserting order", e);
       alert("Hubo un error al procesar tu orden. Intenta nuevamente.");
@@ -716,7 +729,37 @@ export default function ClientMobileApp() {
                 <div className="space-y-12">
                   {activeOrders.filter(o => o.status !== 'entregado').map((order, idx) => (
                     <div key={order.id} className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
-                      <h3 className="font-black text-xl mb-6 text-gray-900 border-b pb-4">Tanda {idx + 1}: {order.name}</h3>
+                      <div className="flex justify-between items-start mb-4 border-b pb-4">
+                        <div>
+                          <h3 className="font-black text-xl text-gray-900">Tanda {idx + 1}: {order.name}</h3>
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md ${order.type === 'llevar' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {order.type === 'llevar' ? 'Para Recoger' : 'Comer Aquí'}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                          <p className="font-black text-xl text-orange-500">${order.total}</p>
+                        </div>
+                      </div>
+
+                      {/* Payment Quick Actions */}
+                      <div className="grid grid-cols-2 gap-3 mb-8">
+                        <button 
+                          onClick={() => handleWaiterCall('pago', `Cuenta (Efectivo) - Orden ${order.id.slice(0,5)}`)}
+                          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-orange-50 hover:border-orange-100 transition-all group"
+                        >
+                          <Banknote className="w-5 h-5 text-gray-400 group-hover:text-orange-500 mb-1" />
+                          <span className="text-[10px] font-black uppercase text-gray-500 group-hover:text-orange-600">Efectivo</span>
+                        </button>
+                        <button 
+                          onClick={() => handleWaiterCall('pago', `Cuenta (Tarjeta) - Orden ${order.id.slice(0,5)}`)}
+                          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all group"
+                        >
+                          <CreditCard className="w-5 h-5 text-gray-400 group-hover:text-blue-500 mb-1" />
+                          <span className="text-[10px] font-black uppercase text-gray-500 group-hover:text-blue-600">Tarjeta</span>
+                        </button>
+                      </div>
+
                       <div className="relative">
                         {/* Vertical Line */}
                         <div className="absolute left-[20px] top-4 bottom-12 w-1 bg-gray-200 rounded-full"></div>
@@ -741,9 +784,9 @@ export default function ClientMobileApp() {
                           />
                           <TrackingStep
                             active={order.status === 'listo'}
-                            icon={<Utensils className="w-5 h-5" />}
-                            title="¡Listo para servir!"
-                            desc="El mesero va en camino a tu mesa."
+                            icon={order.type === 'llevar' ? <ShoppingBag className="w-5 h-5" /> : <Utensils className="w-5 h-5" />}
+                            title={order.type === 'llevar' ? "¡Listo para recoger!" : "¡Listo para servir!"}
+                            desc={order.type === 'llevar' ? "Tu pedido te espera en mostrador." : "El mesero va en camino a tu mesa."}
                           />
                         </div>
                       </div>
