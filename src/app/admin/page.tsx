@@ -661,10 +661,12 @@ export default function AdminDashboard() {
                         Cerrar Sesión
                     </button>
                     <div className="flex items-center gap-3 px-4">
-                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center font-bold">AV</div>
+                        <div className="w-10 h-10 rounded-full bg-orange-600 border border-orange-500/30 flex items-center justify-center font-bold text-white shadow-lg shadow-orange-900/40">
+                            {restaurantName.substring(0, 2).toUpperCase()}
+                        </div>
                         <div>
-                            <p className="text-sm font-bold">Adrian V.</p>
-                            <p className="text-xs text-gray-500">Propietario</p>
+                            <p className="text-sm font-bold truncate max-w-[120px]">{restaurantName}</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Propietario</p>
                         </div>
                     </div>
                 </div>
