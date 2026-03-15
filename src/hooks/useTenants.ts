@@ -70,10 +70,26 @@ export function useTenants() {
         setTenants(prev => prev.filter(t => t.id !== id));
     };
 
+    const updateTenant = async (id: string, updates: Partial<Tenant>) => {
+        const { data, error } = await supabase
+            .from('restaurantes')
+            .update(updates)
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error('Error updating restaurant:', error);
+            throw error;
+        }
+        if (data) setTenants(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+        return data?.[0];
+    };
+
     return {
         tenants,
         loading,
         createTenant,
+        updateTenant,
         updateTenantStatus,
         deleteTenant,
         refresh: fetchTenants

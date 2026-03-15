@@ -14,7 +14,8 @@ import {
     X,
     Trash2,
     PauseCircle,
-    PlayCircle
+    PlayCircle,
+    Pencil
 } from "lucide-react";
 import { useTenants, Tenant } from "@/hooks/useTenants";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +23,7 @@ import { useRouter } from "next/navigation";
 
 export default function SuperAdminDashboard() {
     useAuth('superadmin');
-    const { tenants, loading, createTenant, updateTenantStatus, deleteTenant } = useTenants();
+    const { tenants, loading, createTenant, updateTenant, updateTenantStatus, deleteTenant } = useTenants();
     const router = useRouter();
     const [activeView, setActiveView] = useState('tenants'); // 'tenants' | 'plans' | 'support'
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +31,9 @@ export default function SuperAdminDashboard() {
 
     // Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [newTenant, setNewTenant] = useState({ name: '', plan: 'Pro' as const, access_code: '' });
+    const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -44,6 +47,30 @@ export default function SuperAdminDashboard() {
     const handleLogout = () => {
         localStorage.clear();
         router.push('/login');
+    };
+
+    const handleEdit = (tenant: Tenant) => {
+        setEditingTenant(tenant);
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdateTenant = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTenant) return;
+        setIsSubmitting(true);
+        try {
+            await updateTenant(editingTenant.id, {
+                name: editingTenant.name,
+                plan: editingTenant.plan,
+                access_code: editingTenant.access_code.trim().toUpperCase()
+            });
+            setIsEditModalOpen(false);
+            setEditingTenant(null);
+        } catch (error: any) {
+            alert('Error al actualizar el restaurante: ' + (error.message || 'Error desconocido'));
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCreateTenant = async (e: React.FormEvent) => {
@@ -200,6 +227,13 @@ export default function SuperAdminDashboard() {
                                                             {tenant.status === 'Active' ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
                                                         </button>
                                                         <button 
+                                                            onClick={() => handleEdit(tenant)}
+                                                            className="p-1.5 rounded-md border text-blue-600 border-blue-100 hover:bg-blue-50"
+                                                            title="Editar"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
                                                             onClick={() => { if(confirm('¿Seguro que deseas eliminar este restaurante?')) deleteTenant(tenant.id) }}
                                                             className="p-1.5 rounded-md border text-red-600 border-red-100 hover:bg-red-50"
                                                             title="Eliminar"
@@ -263,6 +297,40 @@ export default function SuperAdminDashboard() {
                                 className="w-full bg-[#111827] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#374151] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {isSubmitting ? "Creando..." : "Crear e Invitar"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Edit Tenant Modal */}
+            {isEditModalOpen && editingTenant && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 overflow-hidden relative">
+                        <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"><X className="w-5 h-5" /></button>
+                        <h3 className="text-xl font-bold mb-6">Editar Restaurante</h3>
+                        <form onSubmit={handleUpdateTenant} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Restaurante</label>
+                                <input required type="text" value={editingTenant.name} onChange={e => setEditingTenant({...editingTenant, name: e.target.value})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]" placeholder="Ej. El Buen Sabor" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plan</label>
+                                <select value={editingTenant.plan} onChange={e => setEditingTenant({...editingTenant, plan: e.target.value as any})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]">
+                                    <option value="Basic">Básico ($49/mo)</option>
+                                    <option value="Pro">Pro ($99/mo)</option>
+                                    <option value="Premium">Premium ($199/mo)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Código de Acceso</label>
+                                <input required type="text" value={editingTenant.access_code} onChange={e => setEditingTenant({...editingTenant, access_code: e.target.value})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-[#111827]" />
+                            </div>
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting}
+                                className="w-full bg-[#111827] text-white py-3 rounded-lg font-bold text-sm hover:bg-[#374151] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {isSubmitting ? "Guardando..." : "Guardar Cambios"}
                             </button>
                         </form>
                     </div>
