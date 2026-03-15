@@ -54,7 +54,7 @@ export default function SuperAdminDashboard() {
                 name: newTenant.name,
                 plan: newTenant.plan,
                 status: 'Active',
-                access_code: newTenant.access_code || `RTF-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+                access_code: (newTenant.access_code || `RTF-${Math.random().toString(36).substring(2, 6).toUpperCase()}`).trim().toUpperCase()
             });
             setIsCreateModalOpen(false);
             setNewTenant({ name: '', plan: 'Pro', access_code: '' });

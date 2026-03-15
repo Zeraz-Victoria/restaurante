@@ -37,14 +37,16 @@ export default function LoginPage() {
         }
 
         try {
+            console.log("Attempting login with code:", normalizedCode);
             const { data, error } = await supabase
                 .from('restaurantes')
                 .select('*')
-                .eq('access_code', normalizedCode)
+                .ilike('access_code', normalizedCode)
                 .single();
 
             if (error || !data) {
-                alert("Código inválido. Por favor intenta de nuevo.");
+                console.error("Supabase login error:", error);
+                alert(`Código inválido o error de conexión. Detalle: ${error?.message || 'No se encontró el restaurante'}`);
                 setIsLoading(false);
                 return;
             }
