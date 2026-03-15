@@ -106,7 +106,7 @@ export default function SuperAdminDashboard() {
             <aside className="w-64 bg-white border-r border-[#e5e7eb] flex flex-col shadow-sm z-10">
                 <div className="p-6">
                     <h1 className="text-xl font-bold tracking-tight text-[#111827]">SaaS Control Center</h1>
-                    <p className="text-xs text-[#6b7280] mt-1 font-medium">RestoFlow 360 Admin</p>
+                    <p className="text-xs text-[#6b7280] mt-1 font-medium">ServiFácil Admin</p>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto mt-2">

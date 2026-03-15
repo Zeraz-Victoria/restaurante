@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     BellRing,
     Utensils,
@@ -71,7 +71,13 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 export default function WaiterPanel() {
     // Retiramos activeTab, el dashboard ahora es unificado
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+    const [restaurantName, setRestaurantName] = useState('Mi Restaurante');
     const router = useRouter();
+
+    useEffect(() => {
+        const name = localStorage.getItem('restaurant_name');
+        if (name) setRestaurantName(name);
+    }, []);
     useAuth('restaurant');
 
     const handleLogout = () => {
@@ -172,8 +178,9 @@ export default function WaiterPanel() {
 
             {/* Sidebar / Top Nav (Mobile) */}
             <nav className="fixed md:static bottom-0 w-full md:w-24 bg-[#1a1d24] border-t md:border-r border-white/5 flex md:flex-col justify-around md:justify-start items-center p-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:min-h-screen">
-                <div className="hidden md:block mb-8">
-                    <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">W</div>
+                <div className="hidden md:block mb-8 text-center">
+                    <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center font-black text-xl shadow-lg mx-auto mb-2">S</div>
+                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-tighter">ServiFácil</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#2a2e39] text-white transition-all">
@@ -229,11 +236,15 @@ export default function WaiterPanel() {
                 {/* MAP HEADER */}
                 <header className="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 mt-8">
                     <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] font-black bg-orange-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">ServiFácil</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{restaurantName}</span>
+                        </div>
                         <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
                             Mapa de Salón
                         </h1>
                         <p className="text-gray-400 font-medium mt-1">
-                            Ordenado por prioridad de atención en tiempo real.
+                            Atención en tiempo real.
                         </p>
                     </div>
                     {/* Status Legend */}

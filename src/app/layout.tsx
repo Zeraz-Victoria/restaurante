@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RestoFlow 360",
+  title: "ServiFácil",
   description: "Sistema de gestión SaaS para restaurantes",
 };
 

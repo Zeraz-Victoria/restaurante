@@ -16,7 +16,13 @@ export default function KitchenDisplaySystemV2() {
     const { updateTableStatus } = useTables();
     const { sendNotification } = useNotifications();
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [restaurantName, setRestaurantName] = useState('Mi Restaurante');
     const router = useRouter();
+
+    useEffect(() => {
+        const name = localStorage.getItem('restaurant_name');
+        if (name) setRestaurantName(name);
+    }, []);
     useAuth('restaurant');
 
     const handleLogout = () => {
@@ -58,6 +64,10 @@ export default function KitchenDisplaySystemV2() {
             {/* Top Bar for Tablet */}
             <header className="flex justify-between items-center mb-6 bg-[#1a1d24] p-4 rounded-xl border border-white/5 shadow-lg">
                 <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black bg-orange-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">ServiFácil</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{restaurantName}</span>
+                    </div>
                     <h1 className="text-2xl font-black text-white tracking-widest uppercase flex items-center gap-3">
                         <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
                         Estación Cocina (KDS)

@@ -64,6 +64,12 @@ export default function AdminDashboard() {
 
     const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState<any>(null);
+    const [restaurantName, setRestaurantName] = useState('Mi Restaurante');
+
+    useEffect(() => {
+        const storedName = localStorage.getItem('restaurant_name');
+        if (storedName) setRestaurantName(storedName);
+    }, []);
 
     // Dynamic states for Sizes and Extras
     const [tempSizes, setTempSizes] = useState<{ id: number; name: string; price: number }[]>([]);
@@ -358,10 +364,10 @@ export default function AdminDashboard() {
 
         // Header
         doc.setFontSize(22);
-        doc.text("RestoFlow 360", 14, 20);
+        doc.text(restaurantName, 14, 20);
 
         doc.setFontSize(14);
-        doc.text("Sugerencias de Resurtido Inteligente", 14, 30);
+        doc.text("Sugerencias de Resurtido Inteligente - ServiFácil", 14, 30);
 
         doc.setFontSize(10);
         doc.setTextColor(100);
@@ -406,7 +412,7 @@ export default function AdminDashboard() {
         });
 
         // Save
-        doc.save(`Resurtido_RestoFlow_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+        doc.save(`Resurtido_${restaurantName.replace(/\s+/g, '_')}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
     };
 
     const handleSaveStaff = (e: React.FormEvent<HTMLFormElement>) => {
@@ -505,12 +511,12 @@ export default function AdminDashboard() {
             {/* Sidebar Desktop */}
             <aside className="hidden lg:flex flex-col w-64 bg-[#111216] border-r border-white/5 p-6 h-screen sticky top-0">
                 <div className="mb-12 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center font-black text-xl shadow-[0_0_20px_rgba(249,115,22,0.3)]">
-                        R
+                    <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-900/40">
+                        <UtensilsCrossed className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-black tracking-tight leading-none text-white">RestoFlow</h1>
-                        <span className="text-[10px] text-orange-500 font-bold uppercase tracking-widest">Admin 360</span>
+                        <h1 className="text-xl font-black tracking-tight leading-none text-white">ServiFácil</h1>
+                        <p className="text-[10px] font-bold text-orange-400 mt-1 uppercase tracking-tighter truncate max-w-[140px]">{restaurantName}</p>
                     </div>
                 </div>
 
