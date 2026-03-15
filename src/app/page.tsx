@@ -18,7 +18,8 @@ import {
   Banknote,
   CreditCard,
   Building2,
-  ShoppingBag
+  ShoppingBag,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { useOrders } from "@/hooks/useOrders";
@@ -103,7 +104,7 @@ export default function ClientMobileApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Order Tracking State
-  type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado' };
+  type OrderProgress = { id: string, name: string, status: 'pendiente' | 'cocinando' | 'listo' | 'entregado', total: number, restaurant_id?: string };
   const [activeOrders, setActiveOrders] = useState<OrderProgress[]>([]);
 
   // Table Session State
@@ -312,7 +313,13 @@ export default function ClientMobileApp() {
       await updateTableStatus(tableId, 'esperando_comida');
 
       // Add to active orders array
-      setActiveOrders(prev => [...prev, { id: newOrderId, name: orderTitle, status: 'pendiente' }]);
+      setActiveOrders(prev => [...prev, { 
+        id: newOrderId, 
+        name: orderTitle, 
+        status: 'pendiente', 
+        total: cartTotal,
+        restaurant_id: (newOrder as any)?.restaurant_id || 'default_tenant'
+      }]);
 
       // Always flag that this table has an active session from now on
       setHasPreviousOrder(true);
@@ -1073,6 +1080,113 @@ export default function ClientMobileApp() {
                    <ReceiptText className="w-4 h-4" /> Solicitar Factura
                  </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- FACTURA MODAL --- */}
+        {isFacturaOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-[#111216] border border-white/10 rounded-3xl w-full max-w-md p-6 sm:p-8 relative shadow-2xl flex flex-col">
+              <button 
+                onClick={() => setIsFacturaOpen(false)} 
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white bg-white/5 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <ReceiptText className="w-6 h-6 text-blue-500" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-white">Solicitar Factura</h3>
+                    <p className="text-gray-400 text-xs mt-1">Completa tus datos fiscales</p>
+                 </div>
+              </div>
+
+              <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsFacturando(true);
+                  try {
+                      // We pick the first available order for the session 
+                      const latestOrder = activeOrders[0]; 
+                      if (!latestOrder) {
+                          alert("No hay una orden activa para facturar.");
+                          return;
+                      }
+                      
+                      const calculatedTotal = latestOrder.total || 0;
+
+                      await requestInvoice({
+                          restaurant_id: latestOrder.restaurant_id || 'default_tenant',
+                          order_id: latestOrder.id,
+                          cliente_rfc: facturaData.rfc.toUpperCase(),
+                          cliente_nombre: facturaData.nombre,
+                          cliente_regimen: facturaData.regimen,
+                          cliente_uso_cfdi: facturaData.uso_cfdi,
+                          cliente_correo: facturaData.correo,
+                          monto_total: calculatedTotal
+                      });
+                      
+                      alert('¡Solicitud de factura enviada exitosamente!');
+                      setIsFacturaOpen(false);
+                      setFacturaData({ rfc: '', nombre: '', regimen: '', uso_cfdi: '', correo: '' });
+                  } catch (error) {
+                      console.error(error);
+                      alert('Error al solicitar la factura. Intenta de nuevo.');
+                  } finally {
+                      setIsFacturando(false);
+                  }
+              }} className="space-y-4">
+                 
+                 <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">RFC</label>
+                    <input required type="text" maxLength={13} value={facturaData.rfc} onChange={e => setFacturaData({...facturaData, rfc: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600 uppercase" placeholder="XAXX010101000" />
+                 </div>
+                 
+                 <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Razón Social o Nombre</label>
+                    <input required type="text" value={facturaData.nombre} onChange={e => setFacturaData({...facturaData, nombre: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600" placeholder="Ej. Juan Pérez" />
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Régimen Fiscal</label>
+                        <select required value={facturaData.regimen} onChange={e => setFacturaData({...facturaData, regimen: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none text-sm">
+                            <option value="">Selecciona...</option>
+                            <option value="601">601 - General de Ley Personas Morales</option>
+                            <option value="603">603 - Personas Morales con Fines no Lucrativos</option>
+                            <option value="605">605 - Sueldos y Salarios</option>
+                            <option value="606">606 - Arrendamiento</option>
+                            <option value="612">612 - Personas Físicas con Actividades</option>
+                            <option value="626">626 - RESICO</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Uso de CFDI</label>
+                        <select required value={facturaData.uso_cfdi} onChange={e => setFacturaData({...facturaData, uso_cfdi: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors appearance-none text-sm">
+                            <option value="">Selecciona...</option>
+                            <option value="G01">G01 - Adquisición de mercancías</option>
+                            <option value="G03">G03 - Gastos en general</option>
+                            <option value="P01">P01 - Por definir</option>
+                        </select>
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Correo Electrónico</label>
+                    <input required type="email" value={facturaData.correo} onChange={e => setFacturaData({...facturaData, correo: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600" placeholder="correo@ejemplo.com" />
+                 </div>
+
+                 <button
+                    type="submit"
+                    disabled={isFacturando}
+                    className="w-full mt-4 py-4 rounded-xl font-black text-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all flex items-center justify-center gap-2"
+                 >
+                    {isFacturando ? <span className="animate-pulse">Enviando...</span> : 'Solicitar Factura'}
+                 </button>
+              </form>
             </div>
           </div>
         )}
