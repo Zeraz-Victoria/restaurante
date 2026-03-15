@@ -86,7 +86,7 @@ export function useProducts() {
         if (error) {
             console.warn("Error adding product, attempting fallback without new UI columns:", error);
             // Fallback for missing columns in Supabase
-            const { is_recommended, discount_price, sizes, extras, ...safeData } = productData as any;
+            const { is_recommended, discount_price, sizes, extras, ingredients, ...safeData } = productData as any;
             const { data: fallbackData, error: fallbackError } = await supabase.from('productos').insert([safeData]).select();
             if (fallbackError) {
                 console.error("Fallback error adding product:", fallbackError);
@@ -102,7 +102,7 @@ export function useProducts() {
         if (error) {
             console.warn("Error updating product, attempting fallback without new UI columns:", error);
              // Fallback for missing columns in Supabase
-            const { is_recommended, discount_price, sizes, extras, ...safeData } = productData as any;
+            const { is_recommended, discount_price, sizes, extras, ingredients, ...safeData } = productData as any;
             const { data: fallbackData, error: fallbackError } = await supabase.from('productos').update(safeData).eq('id', id).select();
             if (fallbackError) {
                 console.error("Fallback error updating product:", fallbackError);

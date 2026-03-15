@@ -43,6 +43,18 @@ type CartItem = {
 
 // --- Main Application ---
 export default function ClientMobileApp() {
+  // --- PRE-HOOK INITIALIZATION (Handle QR params synchronously) ---
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const rid = params.get('restaurant_id');
+    const tId = params.get('table');
+    const mNum = params.get('mesaNum');
+    
+    if (rid) localStorage.setItem('restaurant_id', rid);
+    if (tId) localStorage.setItem('resto_session_table', tId);
+    if (mNum) localStorage.setItem('resto_session_mesa_num', mNum);
+  }
+
   const { products, categorias, loading: productsLoading } = useProducts();
   const { tables, updateTableStatus } = useTables();
   const activeTables = tables.filter((t: any) => t.estado !== 'libre');
@@ -127,23 +139,16 @@ export default function ClientMobileApp() {
 
 
 
-  // Handle URL Params for QR Scanning
+  // Handle URL state and cleaning (Params were pre-loaded synchronously at component top)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tId = params.get('table');
       const mNum = params.get('mesaNum');
-      const rid = params.get('restaurant_id');
-
-      if (rid) {
-        localStorage.setItem('restaurant_id', rid);
-      }
 
       if (tId && mNum) {
         setTableId(tId);
         setMesaNum(mNum);
-        localStorage.setItem('resto_session_table', tId);
-        localStorage.setItem('resto_session_mesa_num', mNum);
 
         // Clean the URL so refreshing doesn't re-trigger initial state logic
         window.history.replaceState({}, document.title, window.location.pathname);
