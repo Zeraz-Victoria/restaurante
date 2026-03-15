@@ -797,6 +797,13 @@ export default function ClientMobileApp() {
             </div>
           )}
 
+
+          {/* Subtle Admin Access Link */}
+          <div className="py-12 text-center opacity-30 hover:opacity-100 transition-opacity">
+            <a href="/login" className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+              <Building2 className="w-3 h-3" /> Acceso Restaurantes
+            </a>
+          </div>
         </main>
 
         {/* --- BOTTOM NAVIGATION BAR --- */}
