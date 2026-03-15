@@ -98,7 +98,7 @@ export default function SuperAdminDashboard() {
     const proCount = tenants.filter(t => t.plan === 'Pro').length;
     const premiumCount = tenants.filter(t => t.plan === 'Premium').length;
 
-    const estimatedMRR = (basicCount * 49) + (proCount * 99) + (premiumCount * 199);
+    const estimatedMRR = (basicCount * 99) + (proCount * 499) + (premiumCount * 999);
 
     return (
         <div className="flex bg-[#f3f4f6] min-h-screen text-[#111827] font-sans">
@@ -170,7 +170,7 @@ export default function SuperAdminDashboard() {
                     <div>
                         <h2 className="text-2xl font-bold mb-6">Visión Global</h2>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <KpiCard title="MRR Estimado" value={`$${estimatedMRR.toLocaleString()}`} icon={<TrendingUp className="text-green-600 w-5 h-5" />} />
+                            <KpiCard title="Ingresos Est. (MXN)" value={`$${estimatedMRR.toLocaleString()}`} icon={<TrendingUp className="text-green-600 w-5 h-5" />} trend="+15%" />
                             <KpiCard title="Restaurantes Activos" value={activeTenantsCount} icon={<Building2 className="text-blue-600 w-5 h-5" />} />
                             <KpiCard title="Suscripciones Pro/Prem" value={proCount + premiumCount} icon={<Users className="text-purple-600 w-5 h-5" />} />
                             <KpiCard title="Tickets de Soporte" value={0} icon={<LifeBuoy className="text-orange-500 w-5 h-5" />} />
@@ -252,9 +252,9 @@ export default function SuperAdminDashboard() {
 
                     {activeView === 'plans' && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <PlanCard name="Básico" price={49} count={basicCount} />
-                            <PlanCard name="Pro" price={99} count={proCount} />
-                            <PlanCard name="Premium" price={199} count={premiumCount} />
+                            <PlanCard name="Básico" price={99} count={basicCount} />
+                            <PlanCard name="Pro" price={499} count={proCount} />
+                            <PlanCard name="Premium" price={999} count={premiumCount} />
                         </div>
                     )}
 
@@ -280,11 +280,11 @@ export default function SuperAdminDashboard() {
                                 <input required type="text" value={newTenant.name} onChange={e => setNewTenant({...newTenant, name: e.target.value})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]" placeholder="Ej. El Buen Sabor" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plan</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plan (Mensual MXN)</label>
                                 <select value={newTenant.plan} onChange={e => setNewTenant({...newTenant, plan: e.target.value as any})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]">
-                                    <option value="Basic">Básico ($49/mo)</option>
-                                    <option value="Pro">Pro ($99/mo)</option>
-                                    <option value="Premium">Premium ($199/mo)</option>
+                                    <option value="Basic">Básico ($99 MXN)</option>
+                                    <option value="Pro">Pro ($499 MXN)</option>
+                                    <option value="Premium">Premium ($999 MXN)</option>
                                 </select>
                             </div>
                             <div>
@@ -314,11 +314,11 @@ export default function SuperAdminDashboard() {
                                 <input required type="text" value={editingTenant.name} onChange={e => setEditingTenant({...editingTenant, name: e.target.value})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]" placeholder="Ej. El Buen Sabor" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plan</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Plan (Mensual MXN)</label>
                                 <select value={editingTenant.plan} onChange={e => setEditingTenant({...editingTenant, plan: e.target.value as any})} className="w-full bg-[#f9fafb] border border-[#d1d5db] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#111827]">
-                                    <option value="Basic">Básico ($49/mo)</option>
-                                    <option value="Pro">Pro ($99/mo)</option>
-                                    <option value="Premium">Premium ($199/mo)</option>
+                                    <option value="Basic">Básico ($99 MXN)</option>
+                                    <option value="Pro">Pro ($499 MXN)</option>
+                                    <option value="Premium">Premium ($999 MXN)</option>
                                 </select>
                             </div>
                             <div>
