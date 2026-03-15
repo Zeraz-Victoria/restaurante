@@ -58,8 +58,8 @@ export default function SuperAdminDashboard() {
             });
             setIsCreateModalOpen(false);
             setNewTenant({ name: '', plan: 'Pro', access_code: '' });
-        } catch (error) {
-            alert('Error al crear el restaurante');
+        } catch (error: any) {
+            alert('Error al crear el restaurante: ' + (error.message || 'Error desconocido'));
         } finally {
             setIsSubmitting(false);
         }
