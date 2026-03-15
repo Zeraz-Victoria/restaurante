@@ -6,6 +6,7 @@ export type OrderStatus = 'pendiente' | 'cocinando' | 'listo' | 'entregado';
 export interface Order {
     id: string;
     mesa_id: string;
+    mesa_nombre?: string;
     restaurant_id?: string;
     estado: OrderStatus;
     items: any[] | string; // JSON

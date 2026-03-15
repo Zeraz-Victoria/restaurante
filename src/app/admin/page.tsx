@@ -415,6 +415,71 @@ export default function AdminDashboard() {
         doc.save(`Resurtido_${restaurantName.replace(/\s+/g, '_')}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
     };
 
+    const exportSalesReportPDF = () => {
+        const doc = new jsPDF();
+        
+        // Filter orders by interval
+        const now = new Date();
+        const filteredSales = orders.filter(o => {
+            if (!o.created_at) return false;
+            const orderDate = new Date(o.created_at);
+            const diffDays = (now.getTime() - orderDate.getTime()) / (1000 * 3600 * 24);
+            
+            if (reportInterval === 'diario') return diffDays < 1;
+            if (reportInterval === 'semanal') return diffDays < 7;
+            if (reportInterval === 'quincenal') return diffDays < 15;
+            if (reportInterval === 'mensual') return diffDays < 30;
+            return true;
+        });
+
+        const totalRecaudado = filteredSales.reduce((acc, curr) => acc + (curr.total || 0), 0);
+        const totalOrdenes = filteredSales.length;
+
+        // Header
+        doc.setFontSize(22);
+        doc.text(restaurantName, 14, 20);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Reporte de Ventas - ServiFácil`, 14, 28);
+        doc.text(`Periodo: ${reportInterval.toUpperCase()} | Fecha: ${new Date().toLocaleDateString()}`, 14, 34);
+
+        // Summary Boxes
+        doc.setDrawColor(230);
+        doc.setFillColor(249, 250, 251);
+        doc.rect(14, 40, 60, 20, 'FD');
+        doc.setTextColor(0);
+        doc.setFontSize(9);
+        doc.text("TOTAL VENTAS", 18, 46);
+        doc.setFontSize(14);
+        doc.text(`$${totalRecaudado.toLocaleString()}`, 18, 54);
+
+        doc.rect(80, 40, 60, 20, 'FD');
+        doc.setFontSize(9);
+        doc.text("ÓRDENES", 84, 46);
+        doc.setFontSize(14);
+        doc.text(`${totalOrdenes}`, 84, 54);
+
+        // Details Table
+        const tableColumn = ["ID Orden", "Mesa", "Total", "Fecha/Hora", "Estado"];
+        const tableRows = filteredSales.map(o => [
+            o.id.substring(0, 8),
+            o.mesa_nombre || "S/M",
+            `$${o.total}`,
+            o.created_at ? new Date(o.created_at).toLocaleString() : '-',
+            o.estado
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 70,
+            theme: 'striped',
+            headStyles: { fillColor: [17, 18, 22] }
+        });
+
+        doc.save(`Reporte_Ventas_${restaurantName.replace(/\s+/g, '_')}_${reportInterval}.pdf`);
+    };
+
     const handleSaveStaff = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -933,6 +998,12 @@ export default function AdminDashboard() {
                                     <option value="quincenal">Últimos 15 Días</option>
                                     <option value="mensual">Últimos 30 Días</option>
                                 </select>
+                                <button 
+                                    onClick={exportSalesReportPDF}
+                                    className="ml-4 flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded-lg text-sm font-bold transition-all shadow-lg"
+                                >
+                                    <Download className="w-4 h-4" /> Exportar Ventas PDF
+                                </button>
                             </div>
                         </div>
 
