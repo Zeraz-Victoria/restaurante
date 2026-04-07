@@ -39,7 +39,7 @@ export function useReviews() {
                 schema: 'public', 
                 table: 'resenas',
                 filter: `restaurant_id=eq.${restaurantId}`
-            }, payload => {
+            }, (payload: any) => {
                 if (payload.eventType === 'INSERT') {
                     setReviews(prev => [payload.new as Review, ...prev]);
                 } else if (payload.eventType === 'DELETE') {

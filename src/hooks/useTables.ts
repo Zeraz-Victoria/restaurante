@@ -25,28 +25,11 @@ export function useTables(initialMockTables: TableType[] = []) {
 
         fetchTables();
 
-        const channelName = `mesas-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
-        const channel = supabase
-            .channel(channelName)
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'mesas',
-                filter: `restaurant_id=eq.${restaurantId}`
-            }, payload => {
-                console.log('Realtime change in mesas:', payload);
-                if (payload.eventType === 'UPDATE') {
-                    setTables(prev => prev.map(t => t.id === payload.new.id ? payload.new as TableType : t));
-                } else if (payload.eventType === 'INSERT') {
-                    setTables(prev => [...prev.filter(t => t.id !== payload.new.id), payload.new as TableType].sort((a, b) => a.numero - b.numero));
-                } else if (payload.eventType === 'DELETE') {
-                    setTables(prev => prev.filter(t => t.id !== payload.old.id));
-                }
-            })
-            .subscribe();
+        // Polling para reemplazar WebSockets de Supabase
+        const intervalId = setInterval(fetchTables, 3000);
 
         return () => {
-            supabase.removeChannel(channel);
+            clearInterval(intervalId);
         };
     }, []);
 

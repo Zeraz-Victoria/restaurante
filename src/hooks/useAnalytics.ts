@@ -44,7 +44,7 @@ export function useAnalytics(products: Product[], interval: string = 'semanal') 
 
         // Optional: Realtime subscription for analytics (might be overkill, but good for demo)
         const sub = supabase.channel('analytics-realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ordenes' }, payload => {
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ordenes' }, (payload: any) => {
                 setAllOrders(prev => [...prev, payload.new]);
             }).subscribe();
 

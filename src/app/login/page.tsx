@@ -3,23 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Utensils, ArrowRight } from "lucide-react";
-
-import { supabase } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
     const [accessCode, setAccessCode] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-
-    // Auto-redirect if already logged in as SuperAdmin or Restaurant
-    useState(() => {
-        if (typeof window !== 'undefined') {
-            const isSuper = localStorage.getItem('superadmin_logged_in') === 'true';
-            if (isSuper) {
-                router.push('/superadmin');
-            }
-        }
-    });
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,42 +16,21 @@ export default function LoginPage() {
 
         const normalizedCode = accessCode.trim().toUpperCase();
 
-        // SuperAdmin Backdoor for demo/dev
-        if (normalizedCode === 'SUPER-ADMIN-360') {
-            alert("Acceso de SuperAdmin detectado. Iniciando sesión maestra...");
-            localStorage.clear();
-            localStorage.setItem('superadmin_logged_in', 'true');
-            router.push('/superadmin');
-            return;
-        }
-
         try {
-            console.log("Attempting login with code:", normalizedCode);
-            const { data, error } = await supabase
-                .from('restaurantes')
-                .select('*')
-                .ilike('access_code', normalizedCode)
-                .single();
+            const res = await signIn("credentials", {
+                redirect: false,
+                accessCode: normalizedCode
+            });
 
-            if (error || !data) {
-                console.error("Supabase login error:", error);
-                alert(`Código inválido o error de conexión. Detalle: ${error?.message || 'No se encontró el restaurante'}`);
+            if (res?.error) {
+                alert("Código inválido o restaurante suspendido. Verifica tus datos.");
                 setIsLoading(false);
                 return;
             }
 
-            if (data.status === 'Suspended') {
-                alert("Este restaurante está suspendido. Contacta al administrador.");
-                setIsLoading(false);
-                return;
+            if (res?.ok) {
+                router.push("/admin");
             }
-
-            // Save restaurant info
-            localStorage.clear(); // Clear any previous superadmin or other restaurant sessions
-            localStorage.setItem('restaurant_id', data.id);
-            localStorage.setItem('restaurant_name', data.name);
-            
-            router.push("/admin");
         } catch (error) {
             console.error('Login error:', error);
             alert("Error al iniciar sesión. Inténtalo de nuevo.");
@@ -73,7 +41,6 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-[#0f1115] text-white flex items-center justify-center p-4 selection:bg-orange-500/30">
             <div className="w-full max-w-md bg-[#1a1d24] rounded-3xl p-8 md:p-12 shadow-2xl border border-white/5 relative overflow-hidden">
-                {/* Background glow effect */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-orange-500/20 blur-[100px] pointer-events-none rounded-full" />
 
                 <div className="text-center mb-10 relative z-10">
@@ -118,7 +85,6 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                {/* Footer Link */}
                 <div className="mt-8 text-center relative z-10">
                     <p className="text-sm text-gray-500">
                         ¿Control Total? <a href="/superadmin" className="text-orange-400 hover:text-orange-300 font-bold transition-colors">Login Super Admin</a>

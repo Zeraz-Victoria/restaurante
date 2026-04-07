@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Restaurant {
+  id          String      @id @default(uuid())
+  name        String
+  access_code String?     @unique
+  status      String      @default("Activo") // Activo, Suspendido
+  created_at  DateTime    @default(now())
+
+  users      User[]
+  categories Categoria[]
+  products   Producto[]
+  mesas      Mesa[]
+  ordenes    Orden[]
+  facturas   Factura[]
+  resenas    Resena[]
+}
+
+model User {
+  id            String     @id @default(uuid())
+  restaurant_id String
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+  name          String
+  role          String     // "ADMIN", "MESERO", "COCINA"
+  pin_or_hash   String     // Hash de bcrypt
+  status        String     @default("Activo")
+  created_at    DateTime   @default(now())
+}
+
+model Categoria {
+  id            String     @id @default(uuid())
+  restaurant_id String
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+  name          String
+  order_index   Int
+  created_at    DateTime   @default(now())
+
+  productos     Producto[]
+}
+
+model Producto {
+  id             String     @id @default(uuid())
+  restaurant_id  String
+  restaurant     Restaurant @relation(fields: [restaurant_id], references: [id])
+  category_id    String
+  categoria      Categoria  @relation(fields: [category_id], references: [id])
+  
+  name           String
+  description    String     @default("")
+  price          Float
+  cost           Float      @default(0)
+  image_url      String     @default("")
+  status         String     @default("Activo")
+  is_spicy       Boolean    @default(false)
+  isPopular      Boolean    @default(false)
+  is_recommended Boolean    @default(false)
+  discount_price Float?
+
+  // Campos JSONB para esquemas flexibles convertidos a String para SQLite
+  sizes          String?    @default("[]") // [{name: "S", price: 100}]
+  options        String?    @default("[]") // [{name: "Salsa", choices: ["Roja", "Verde"]}]
+  extras         String?    @default("[]") // [{name: "Extra Queso", price: 20}]
+  ingredients    String?    @default("[]") // [{name: "Tomate", quantity: 1, unit: "pz"}]
+
+  created_at     DateTime   @default(now())
+}
+
+model Mesa {
+  id            String     @id @default(uuid())
+  restaurant_id String
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+  
+  numero        Int
+  estado        String     @default("libre") // libre, mirando_menu, esperando_comida, comiendo, necesita_ayuda, pidiendo_cuenta
+  session_id    String?
+  active_guests Int?       @default(0)
+  
+  created_at    DateTime   @default(now())
+  
+  // Como las órdenes asocian por ID pero "llevar_web" no corresponde a una mesa forzosa, dependemos de strings,
+  // pero mantendremos este modelo aislado.
+}
+
+model Orden {
+  id                String     @id @default(uuid())
+  restaurant_id     String
+  restaurant        Restaurant @relation(fields: [restaurant_id], references: [id])
+  
+  // Guardamos el string directo para bancar "llevar_web" fácilmente
+  mesa_id           String
+  mesa_nombre       String?
+  
+  estado            String     @default("pendiente") // pendiente, cocinando, listo, entregado
+  items             String     @default("[]")
+  total             Float
+  marchado_tiempo_2 Boolean    @default(false)
+  is_addition       Boolean    @default(false)
+  
+  created_at        DateTime   @default(now())
+  
+  factura           Factura?
+}
+
+model Factura {
+  id               String     @id @default(uuid())
+  restaurant_id    String
+  restaurant       Restaurant @relation(fields: [restaurant_id], references: [id])
+  
+  order_id         String     @unique
+  orden            Orden      @relation(fields: [order_id], references: [id])
+  
+  cliente_rfc      String
+  cliente_nombre   String
+  cliente_regimen  String
+  cliente_uso_cfdi String
+  cliente_correo   String
+  constancia_url   String?
+  monto_total      Float
+  
+  estado           String     @default("pendiente") // pendiente, facturada, rechazada
+  
+  created_at       DateTime   @default(now())
+}
+
+model Resena {
+  id            String     @id @default(uuid())
+  restaurant_id String
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+  
+  mesa_id       String     // String for flexibility (e.g. order tracking linking)
+  calificacion  Int
+  comentario    String
+  
+  created_at    DateTime   @default(now())
+}

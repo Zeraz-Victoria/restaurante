@@ -36,29 +36,11 @@ export function useOrders(initialMockOrders: Order[] = []) {
 
         fetchOrders();
 
-        // Subscribe to real-time changes
-        const channelName = `ordenes-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
-        const subscription = supabase
-            .channel(channelName)
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'ordenes',
-                filter: `restaurant_id=eq.${restaurantId}`
-            }, payload => {
-                console.log('Realtime change in ordenes:', payload);
-                if (payload.eventType === 'INSERT') {
-                    setOrders(prev => [...prev, payload.new as Order]);
-                } else if (payload.eventType === 'UPDATE') {
-                    setOrders(prev => prev.map(o => o.id === payload.new.id ? (payload.new as Order) : o));
-                } else if (payload.eventType === 'DELETE') {
-                    setOrders(prev => prev.filter(o => o.id !== payload.old.id));
-                }
-            })
-            .subscribe();
+        // Polling para reemplazar WebSockets de Supabase
+        const intervalId = setInterval(fetchOrders, 3000);
 
         return () => {
-            supabase.removeChannel(subscription);
+            clearInterval(intervalId);
         };
     }, []);
 

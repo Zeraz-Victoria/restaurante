@@ -23,31 +23,11 @@ export function useNotifications(initialMockNotifs: any[] = []) {
 
         fetchNotifs();
 
-        const channelName = `solicitudes-realtime-${restaurantId}-${Math.random().toString(36).substring(7)}`;
-        const channel = supabase
-            .channel(channelName)
-            .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'solicitudes_ayuda',
-                filter: `restaurant_id=eq.${restaurantId}`
-            }, payload => {
-                console.log('Realtime INSERT in solicitudes_ayuda:', payload);
-                setNotifications(prev => [payload.new, ...prev]);
-            })
-            .on('postgres_changes', { 
-                event: 'UPDATE', 
-                schema: 'public', 
-                table: 'solicitudes_ayuda',
-                filter: `restaurant_id=eq.${restaurantId}`
-            }, payload => {
-                console.log('Realtime UPDATE in solicitudes_ayuda:', payload);
-                setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
-            })
-            .subscribe();
+        // Polling para reemplazar WebSockets de Supabase
+        const intervalId = setInterval(fetchNotifs, 3000);
 
         return () => {
-            supabase.removeChannel(channel);
+            clearInterval(intervalId);
         };
     }, []);
 

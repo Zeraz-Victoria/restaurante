@@ -1,0 +1,40 @@
+# Configuración simplificada de contenedores
+version: '3.8'
+
+services:
+  # Base de Datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-restaurante_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123_seguro}
+      POSTGRES_DB: ${POSTGRES_DB:-restaurante_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-restaurante_admin} -d ${POSTGRES_DB:-restaurante_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación Next.js
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-restaurante_admin}:${POSTGRES_PASSWORD:-admin123_seguro}@db:5432/${POSTGRES_DB:-restaurante_db}?schema=public
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-super_secret_key_12345}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
