@@ -17,6 +17,7 @@ export async function POST(req: Request) {
 
     const session = await getServerSession(authOptions);
     let restaurantId = session?.user?.id;
+    const isSuperAdmin = restaurantId === 'super-admin';
 
     if (!restaurantId) {
         // Fallback to payload's restaurant_id if it's a safe public action
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
             'mesas': prisma.mesa,
             'facturas': prisma.factura,
             'resenas': prisma.resena,
-            'solicitudes_ayuda': prisma.solicitudAyuda
+            'solicitudes_ayuda': (prisma as any).solicitudAyuda
         };
 
         const model = models[entity];
@@ -87,13 +88,13 @@ export async function POST(req: Request) {
         switch (action) {
             case 'findMany':
                 result = await model.findMany({
-                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
+                    where: isSuperAdmin || entity === 'restaurantes' ? (where || {}) : { ...where, restaurant_id: restaurantId },
                     orderBy: orderBy || undefined
                 });
                 break;
             case 'findFirst':
                 result = await model.findFirst({
-                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
+                    where: isSuperAdmin || entity === 'restaurantes' ? (where || {}) : { ...where, restaurant_id: restaurantId },
                     orderBy: orderBy || undefined
                 });
                 break;
@@ -108,13 +109,13 @@ export async function POST(req: Request) {
                 break;
             case 'update':
                 result = await model.updateMany({
-                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
+                    where: isSuperAdmin || entity === 'restaurantes' ? (where || {}) : { ...where, restaurant_id: restaurantId },
                     data: processDataIn(data)
                 });
                 break;
             case 'delete':
                 result = await model.deleteMany({
-                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId }
+                    where: isSuperAdmin || entity === 'restaurantes' ? (where || {}) : { ...where, restaurant_id: restaurantId }
                 });
                 break;
             default:
