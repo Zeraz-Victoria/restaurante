@@ -8,7 +8,9 @@ export class SupabaseQueryBuilder {
     }
     
     select(cols?: string) {
-        this.query.action = 'findMany';
+        if (!this.query.action) {
+            this.query.action = 'findMany';
+        }
         return this;
     }
     

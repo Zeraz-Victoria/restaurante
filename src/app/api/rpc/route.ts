@@ -87,13 +87,13 @@ export async function POST(req: Request) {
         switch (action) {
             case 'findMany':
                 result = await model.findMany({
-                    where: { ...where, restaurant_id: restaurantId },
+                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
                     orderBy: orderBy || undefined
                 });
                 break;
             case 'findFirst':
                 result = await model.findFirst({
-                    where: { ...where, restaurant_id: restaurantId },
+                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
                     orderBy: orderBy || undefined
                 });
                 break;
@@ -108,13 +108,13 @@ export async function POST(req: Request) {
                 break;
             case 'update':
                 result = await model.updateMany({
-                    where: { ...where, restaurant_id: restaurantId },
+                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId },
                     data: processDataIn(data)
                 });
                 break;
             case 'delete':
                 result = await model.deleteMany({
-                    where: { ...where, restaurant_id: restaurantId }
+                    where: entity === 'restaurantes' ? where : { ...where, restaurant_id: restaurantId }
                 });
                 break;
             default:
