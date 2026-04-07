@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "3000:3000"
+      - "4000:3000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-restaurante_admin}:${POSTGRES_PASSWORD:-admin123_seguro}@db:5432/${POSTGRES_DB:-restaurante_db}?schema=public
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
