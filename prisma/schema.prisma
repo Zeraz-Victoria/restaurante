@@ -21,6 +21,7 @@ model Restaurant {
   ordenes    Orden[]
   facturas   Factura[]
   resenas    Resena[]
+  solicitudes SolicitudAyuda[]
 }
 
 model User {
@@ -137,6 +138,19 @@ model Resena {
   mesa_id       String     // String for flexibility (e.g. order tracking linking)
   calificacion  Int
   comentario    String
+  
+  created_at    DateTime   @default(now())
+}
+
+model SolicitudAyuda {
+  id            String     @id @default(uuid())
+  restaurant_id String
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  
+  tipo          String
+  mesa_id       String     // String to allow cross-linking loosely
+  mensaje       String
+  leido         Boolean    @default(false)
   
   created_at    DateTime   @default(now())
 }

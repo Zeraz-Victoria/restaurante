@@ -51,7 +51,8 @@ export async function POST(req: Request) {
             'productos': prisma.producto,
             'mesas': prisma.mesa,
             'facturas': prisma.factura,
-            'resenas': prisma.resena
+            'resenas': prisma.resena,
+            'solicitudes_ayuda': prisma.solicitudAyuda
         };
 
         const model = models[entity];
