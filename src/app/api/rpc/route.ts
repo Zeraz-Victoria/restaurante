@@ -97,8 +97,12 @@ export async function POST(req: Request) {
                 });
                 break;
             case 'create':
+                const createData = processDataIn({ ...data });
+                if (entity !== 'restaurantes') {
+                    createData.restaurant_id = restaurantId;
+                }
                 result = await model.create({
-                    data: processDataIn({ ...data, restaurant_id: restaurantId })
+                    data: createData
                 });
                 break;
             case 'update':
