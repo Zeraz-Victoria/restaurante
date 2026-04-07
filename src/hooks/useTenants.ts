@@ -1,13 +1,28 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+
+const ADMIN_KEY = 'SUPER-ADMIN-360';
 
 export interface Tenant {
     id: string;
     name: string;
-    plan: 'Basic' | 'Pro' | 'Premium';
-    status: 'Active' | 'Suspended';
+    plan?: string;
+    status: string;
     access_code: string;
     created_at?: string;
+}
+
+async function superAdminFetch(method: 'GET' | 'POST', body?: any): Promise<any> {
+    const res = await fetch('/api/superadmin', {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': ADMIN_KEY,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Error desconocido');
+    return json.data;
 }
 
 export function useTenants() {
@@ -16,13 +31,12 @@ export function useTenants() {
 
     const fetchTenants = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('restaurantes')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (data) setTenants(data);
-        if (error) console.error('Error fetching restaurants:', error);
+        try {
+            const data = await superAdminFetch('GET');
+            if (data) setTenants(data);
+        } catch (error) {
+            console.error('Error fetching restaurants:', error);
+        }
         setLoading(false);
     };
 
@@ -31,62 +45,26 @@ export function useTenants() {
     }, []);
 
     const createTenant = async (tenantData: Omit<Tenant, 'id' | 'created_at'>) => {
-        const payload = { ...tenantData };
-        delete (payload as any).plan; // Hack: remove plan temporarily since it's not in Prisma schema
-        const { data, error } = await supabase
-            .from('restaurantes')
-            .insert([payload])
-            .select();
-
-        if (error) {
-            console.error('Error creating restaurant:', error);
-            throw error;
-        }
-        if (data) setTenants(prev => [data[0], ...prev]);
-        return data?.[0];
+        const { plan, ...safeData } = tenantData as any;
+        const restaurant = await superAdminFetch('POST', { action: 'create', data: safeData });
+        setTenants(prev => [restaurant, ...prev]);
+        return restaurant;
     };
 
-    const updateTenantStatus = async (id: string, status: 'Active' | 'Suspended') => {
-        const { error } = await supabase
-            .from('restaurantes')
-            .update({ status })
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error updating restaurant status:', error);
-            throw error;
-        }
+    const updateTenantStatus = async (id: string, status: string) => {
+        await superAdminFetch('POST', { action: 'update', id, data: { status } });
         setTenants(prev => prev.map(t => t.id === id ? { ...t, status } : t));
     };
 
     const deleteTenant = async (id: string) => {
-        const { error } = await supabase
-            .from('restaurantes')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error deleting restaurant:', error);
-            throw error;
-        }
+        await superAdminFetch('POST', { action: 'delete', id });
         setTenants(prev => prev.filter(t => t.id !== id));
     };
 
     const updateTenant = async (id: string, updates: Partial<Tenant>) => {
-        const payload = { ...updates };
-        delete (payload as any).plan; // Hack: remove plan
-        const { data, error } = await supabase
-            .from('restaurantes')
-            .update(payload)
-            .eq('id', id)
-            .select();
-
-        if (error) {
-            console.error('Error updating restaurant:', error);
-            throw error;
-        }
-        if (data) setTenants(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-        return data?.[0];
+        const { plan, ...safeUpdates } = updates as any;
+        await superAdminFetch('POST', { action: 'update', id, data: safeUpdates });
+        setTenants(prev => prev.map(t => t.id === id ? { ...t, ...safeUpdates } : t));
     };
 
     return {
