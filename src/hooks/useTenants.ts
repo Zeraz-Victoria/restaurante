@@ -31,9 +31,11 @@ export function useTenants() {
     }, []);
 
     const createTenant = async (tenantData: Omit<Tenant, 'id' | 'created_at'>) => {
+        const payload = { ...tenantData };
+        delete (payload as any).plan; // Hack: remove plan temporarily since it's not in Prisma schema
         const { data, error } = await supabase
             .from('restaurantes')
-            .insert([tenantData])
+            .insert([payload])
             .select();
 
         if (error) {
@@ -71,9 +73,11 @@ export function useTenants() {
     };
 
     const updateTenant = async (id: string, updates: Partial<Tenant>) => {
+        const payload = { ...updates };
+        delete (payload as any).plan; // Hack: remove plan
         const { data, error } = await supabase
             .from('restaurantes')
-            .update(updates)
+            .update(payload)
             .eq('id', id)
             .select();
 
